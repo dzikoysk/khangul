@@ -1,20 +1,28 @@
+import RemovePolicy.DEFAULT
+import RemovePolicy.REFORMAT_ON_DELETE
+import kotlin.js.ExperimentalJsExport
+import kotlin.js.JsExport
 import kotlin.math.min
 
+@OptIn(ExperimentalJsExport::class)
+@JsExport
 enum class RemovePolicy {
     DEFAULT,
     REFORMAT_ON_DELETE
 }
 
+@OptIn(ExperimentalJsExport::class)
+@JsExport
 class HangulContext(
     initialPhrase: String = "",
-    private val removePolicy: RemovePolicy = RemovePolicy.DEFAULT
+    private val removePolicy: RemovePolicy = DEFAULT
 ) {
 
     private var content = initialPhrase
     private var caretPosition = initialPhrase.length
 
-    fun appendLetter(letter: Char) {
-        insertAtCaret(letter.toString())
+    fun appendLetter(letter: String) {
+        insertAtCaret(letter)
         val deleted = deleteAtCaret(2)
         insertAtCaret(composeHangul(deleted))
     }
@@ -30,10 +38,9 @@ class HangulContext(
 
         if (decomposed.length > 1) {
             when (removePolicy) {
-                RemovePolicy.DEFAULT -> insertAtCaret(composeHangul(decomposed.dropLast(1)))
-                RemovePolicy.REFORMAT_ON_DELETE -> decomposed.dropLast(1).forEach { appendLetter(it) }
+                DEFAULT -> insertAtCaret(composeHangul(decomposed.dropLast(1)))
+                REFORMAT_ON_DELETE -> decomposed.dropLast(1).forEach { appendLetter(it.toString()) }
             }
-
         }
     }
 

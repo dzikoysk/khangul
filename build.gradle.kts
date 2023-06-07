@@ -1,10 +1,14 @@
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin
+import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension
+
 plugins {
     kotlin("multiplatform") version "1.8.21"
     id("dev.petuska.npm.publish") version "3.3.1"
 }
 
 group = "com.dzikoysk"
-version = "1.0.0"
+version = "1.0.4"
 
 repositories {
     mavenCentral()
@@ -12,14 +16,9 @@ repositories {
 
 kotlin {
     js(IR) {
-        binaries.executable()
-        browser {
-            commonWebpackConfig {
-                cssSupport {
-                    enabled.set(true)
-                }
-            }
-        }
+        binaries.library()
+        browser()
+        generateTypeScriptDefinitions()
     }
 
     jvm {
@@ -64,7 +63,31 @@ npmPublish {
     registries {
         register("npmjs") {
             uri.set("https://registry.npmjs.org")
-            authToken.set(System.getProperty("npm.token") ?: "")
+            authToken.set(property("npm.token").toString())
         }
     }
+}
+
+tasks.register("publishNpm") {
+    dependsOn(
+        "clean",
+        "test",
+        "assembleJsPackage",
+        "packJsPackage",
+        "publishJsPackageToNpmjsRegistry"
+    )
+
+    tasks.findByName("test")?.mustRunAfter("clean")
+    tasks.findByName("kotlinStoreYarnLock")?.dependsOn("kotlinUpgradeYarnLock")
+    tasks.findByName("assembleJsPackage")?.mustRunAfter("test")
+    tasks.findByName("packJsPackage")?.mustRunAfter("assembleJsPackage")
+    tasks.findByName("publishJsPackageToNpmjsRegistry")?.mustRunAfter("packJsPackage")
+}
+
+
+// https://kotlinlang.org/docs/whatsnew18.html#new-settings-for-reporting-that-yarn-lock-has-been-updated
+rootProject.plugins.withType(YarnPlugin::class.java) {
+    rootProject.the<YarnRootExtension>().yarnLockMismatchReport = YarnLockMismatchReport.WARNING // NONE | FAIL
+    rootProject.the<YarnRootExtension>().reportNewYarnLock = false // true
+    rootProject.the<YarnRootExtension>().yarnLockAutoReplace = true // true
 }
