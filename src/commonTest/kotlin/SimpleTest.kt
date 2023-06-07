@@ -6,6 +6,7 @@ class TestClient {
     @Test
     fun testGreet() {
         val result = composeHangul("아ㄴ")
+        println("아ㄴ")
         println(result)
         assertEquals("안", result)
     }

@@ -1,3 +1,3 @@
 
-rootProject.name = "Hangul-kt"
+rootProject.name = "khangul"
 
