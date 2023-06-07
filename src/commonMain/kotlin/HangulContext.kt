@@ -1,6 +1,14 @@
 import kotlin.math.min
 
-class HangulContext(initialPhrase: String = "") {
+enum class RemovePolicy {
+    DEFAULT,
+    REFORMAT_ON_DELETE
+}
+
+class HangulContext(
+    initialPhrase: String = "",
+    private val removePolicy: RemovePolicy = RemovePolicy.DEFAULT
+) {
 
     private var content = initialPhrase
     private var caretPosition = initialPhrase.length
@@ -12,7 +20,21 @@ class HangulContext(initialPhrase: String = "") {
     }
 
     fun removeLastLetter() {
-        println("removeLastLetter")
+        var deleted = deleteAtCaret(1)
+
+        if (deleted.isNotEmpty() && deleted[0].code in 56320..57343) {
+            deleted = deleteAtCaret(1) + deleted
+        }
+
+        val decomposed = decomposeHangul(deleted)
+
+        if (decomposed.length > 1) {
+            when (removePolicy) {
+                RemovePolicy.DEFAULT -> insertAtCaret(composeHangul(decomposed.dropLast(1)))
+                RemovePolicy.REFORMAT_ON_DELETE -> decomposed.dropLast(1).forEach { appendLetter(it) }
+            }
+
+        }
     }
 
     private fun insertAtCaret(value: String) {

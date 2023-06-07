@@ -2,18 +2,18 @@ import kotlin.js.JsName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class TestClient {
+class HangulContextText {
 
     @Test
-    @JsName("convertToHangul")
+    @JsName("convertToSyllables")
     fun `should convert composable letters into hangul syllable`() {
         assertEquals("안", composeHangul("아ㄴ"))
         assertEquals("아", composeHangul("ㅇㅏ"))
     }
 
     @Test
-    @JsName("convertToHangul2")
-    fun `should covert `() {
+    @JsName("letterByLetterConversion")
+    fun `should progressively convert composable letters into hangul syllable`() {
         val context = HangulContext()
 
         context.appendLetter('ㅇ')
@@ -51,6 +51,60 @@ class TestClient {
 
         context.appendLetter('ㅛ')
         assertEquals("안녕하세요", context.getValue())
+    }
+
+    @Test
+    @JsName("removeLastLetter")
+    fun `should progressively drop last letters from syllables without reformat`() {
+        val context = HangulContext("안녕하세요")
+
+        context.removeLastLetter()
+        assertEquals("안녕하세ㅇ", context.getValue())
+
+        context.removeLastLetter()
+        assertEquals("안녕하세", context.getValue())
+
+        context.removeLastLetter()
+        assertEquals("안녕하ㅅ", context.getValue())
+
+        context.removeLastLetter()
+        assertEquals("안녕하", context.getValue())
+
+        context.removeLastLetter()
+        assertEquals("안녕ㅎ", context.getValue())
+
+        context.removeLastLetter()
+        assertEquals("안녕", context.getValue())
+
+        context.removeLastLetter()
+        assertEquals("안녀", context.getValue())
+
+        context.removeLastLetter()
+        assertEquals("안ㄴ", context.getValue())
+
+        context.removeLastLetter()
+        assertEquals("안", context.getValue())
+
+        context.removeLastLetter()
+        assertEquals("아", context.getValue())
+
+        context.removeLastLetter()
+        assertEquals("ㅇ", context.getValue())
+
+        context.removeLastLetter()
+        assertEquals("", context.getValue())
+    }
+
+    @Test
+    @JsName("removeLastLetterWithReformat")
+    fun `should progressively drop last letters from syllables with reformat`() {
+        val context = HangulContext(
+            initialPhrase = "안녕하세요",
+            removePolicy = RemovePolicy.REFORMAT_ON_DELETE
+        )
+
+        context.removeLastLetter()
+        assertEquals("안녕하셍", context.getValue())
     }
 
 } 
