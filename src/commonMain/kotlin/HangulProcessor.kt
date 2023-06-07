@@ -1,17 +1,18 @@
-import HangulGroups.LeadingConsonantsCount
-import HangulGroups.InitialCount
-import HangulGroups.SyllableBase
-import HangulGroups.TrailingConsonantsCount
-import HangulGroups.SyllableCount
-import HangulGroups.VowelBase
-import HangulGroups.MedialVowelCount
-import HangulGroups.doubledRelativeFinale
-import HangulGroups.doubledRelativeMedial
-import HangulGroups.finaleCodes
-import HangulGroups.initialCodes
+import HangulDefinition.LeadingConsonantsCount
+import HangulDefinition.InitialCount
+import HangulDefinition.SyllableBase
+import HangulDefinition.TrailingConsonantsCount
+import HangulDefinition.SyllableCount
+import HangulDefinition.VowelBase
+import HangulDefinition.MedialVowelCount
+import HangulDefinition.doubledRelativeFinale
+import HangulDefinition.doubledRelativeMedial
+import HangulDefinition.finaleCodes
+import HangulDefinition.initialCodes
+import de.cketti.codepoints.appendCodePoint
 import kotlin.math.floor
 
-object HangulGroups {
+internal object HangulDefinition {
 
     /* First consonants */
     private val initial = arrayOf(
@@ -40,11 +41,14 @@ object HangulGroups {
     const val VowelBase = 12623
 
     const val MedialVowelCount = 21
+
     /* Initial factor */
     const val InitialCount = 588
     /* Medial factor */
-    val TrailingConsonantsCount = finaleCodes.size
-    val LeadingConsonantsCount = initialCodes.size
+    val TrailingConsonantsCount = finaleCodes.size // 19
+    /* Finale factor */
+    val LeadingConsonantsCount = initialCodes.size // 28
+
     val SyllableCount = LeadingConsonantsCount * MedialVowelCount * TrailingConsonantsCount // (11172) all possible variants
 
     init {
@@ -54,7 +58,7 @@ object HangulGroups {
 
 }
 
-fun composeHangul(input: String): String {
+internal fun composeHangul(input: String): String {
     if (input.isEmpty()) return ""
 
     var syllableCode = input[0].code
@@ -108,7 +112,9 @@ fun composeHangul(input: String): String {
                     continue
                 }
             }
+
             val doubledFinaleConsonant = doubledRelativeFinale.indexOf((finalConsonant * 100) + finaleCodes.indexOf(currentCode))
+
             if (doubledFinaleConsonant > 0) {
                 syllableCode = syllableCode + doubledFinaleConsonant - finalConsonant
                 result = result.sliceExclusive(0..result.length) + fromCharCode(syllableCode)
@@ -123,8 +129,38 @@ fun composeHangul(input: String): String {
     return result
 }
 
-fun String.sliceExclusive(range: IntRange): String =
+internal fun decomposeHangul(input: String): String {
+    var result = ""
+
+    for (char in input) {
+        val charCode = char.code
+        val relativeCode = charCode - SyllableBase
+
+        if (relativeCode < 0 || relativeCode >= SyllableCount) {
+            result += char // unknown
+            continue
+        }
+
+        val initialCode = initialCodes[floor(relativeCode / InitialCount.toDouble()).toInt()]
+        val syllable = VowelBase + (relativeCode % InitialCount) / TrailingConsonantsCount
+        val finaleCode = finaleCodes[relativeCode % TrailingConsonantsCount]
+        result += fromCharCode(initialCode, syllable)
+
+        if (finaleCode != 0) {
+            result += fromCharCode(finaleCode)
+        }
+    }
+
+    return result
+}
+
+private fun String.sliceExclusive(range: IntRange): String =
     this.slice(range.first until range.last - 2)
 
-fun fromCharCode(code: Int): String =
-    Char(code).toString()
+private fun fromCharCode(vararg codePoints: Int): String {
+    val builder = StringBuilder(codePoints.size)
+    for (codePoint in codePoints) {
+        builder.appendCodePoint(codePoint)
+    }
+    return builder.toString()
+}
