@@ -37,8 +37,8 @@ console.log(hangulContext.getValue()) // 아
 
 ### Use-cases
 
-The library handles natural Hangul input, so it's main use-case is to be used in text editors, chat apps, etc.
-As an example,
+The library handles natural Hangul input, so its main use-case is to be used in text editors, chat apps, etc.
+As an example, there's a preview of [react-simple-keyboard](https://github.com/hodgef/react-simple-keyboard) component integrated with our Hangul context & compatibile keyboard layout:
 
 ```tsx
 import { HangulContext } from "khangul"
