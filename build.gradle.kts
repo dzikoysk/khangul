@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_VARIABLE")
+
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnLockMismatchReport
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension
@@ -8,7 +10,7 @@ plugins {
 }
 
 group = "com.dzikoysk"
-version = "1.0.5"
+version = "1.0.6"
 
 repositories {
     mavenCentral()
@@ -61,6 +63,24 @@ kotlin {
 
 npmPublish {
     readme.set(file("README.md"))
+
+    packages {
+        named("js") {
+            packageJson {
+                description.set("Hangul processor for Kotlin Multiplatform & JavaScript projects, based on reverse-engineered Branah keyboard algorithm")
+                author {
+                    name.set("dzikoysk")
+                }
+                repository {
+                    type.set("git")
+                    url.set("https://github.com/dzikoysk/khangul")
+                }
+                bugs {
+                    url.set("https://github.com/dzikoysk/khangul")
+                }
+            }
+        }
+    }
 
     registries {
         register("npmjs") {
