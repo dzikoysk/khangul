@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.dzikoysk"
-version = "1.0.4"
+version = "1.0.5"
 
 repositories {
     mavenCentral()
@@ -60,6 +60,8 @@ kotlin {
 }
 
 npmPublish {
+    readme.set(file("README.md"))
+
     registries {
         register("npmjs") {
             uri.set("https://registry.npmjs.org")
