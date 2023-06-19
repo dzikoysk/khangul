@@ -44,6 +44,12 @@ class HangulContext(
         }
     }
 
+    fun composeHangul(value: String): String =
+        HangulProcessor.composeHangul(value)
+
+    fun decomposeHangul(value: String? = null): String =
+        HangulProcessor.decomposeHangul(value ?: content)
+
     private fun insertAtCaret(value: String) {
         val selectionStart = getSelectionStart()
         val selectionEnd = getSelectionEnd()

@@ -3,19 +3,21 @@ import kotlin.js.JsName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class HangulContextText {
+internal class HangulContextTest {
+
+    private val context = HangulContext()
 
     @Test
     @JsName("convertToSyllables")
     fun `should convert composable letters into hangul syllable`() {
-        assertEquals("안", composeHangul("아ㄴ"))
-        assertEquals("아", composeHangul("ㅇㅏ"))
+        assertEquals("안", context.composeHangul("아ㄴ"))
+        assertEquals("아", context.composeHangul("ㅇㅏ"))
     }
 
     @Test
     @JsName("letterByLetterConversion")
     fun `should progressively convert composable letters into hangul syllable`() {
-        val context = HangulContext()
+
 
         context.appendLetter("ㅇ")
         assertEquals("ㅇ", context.getValue())
