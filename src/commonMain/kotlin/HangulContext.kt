@@ -21,6 +21,11 @@ class HangulContext(
     private var content = initialPhrase
     private var caretPosition = initialPhrase.length
 
+    fun clear() {
+        this.content = ""
+        this.caretPosition = 0
+    }
+
     fun appendLetter(letter: String) {
         insertAtCaret(letter)
         val deleted = deleteAtCaret(2)
