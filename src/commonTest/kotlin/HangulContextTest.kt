@@ -8,6 +8,16 @@ internal class HangulContextTest {
     private val context = HangulContext()
 
     @Test
+    @JsName("clear")
+    fun `should clear content`() {
+        context.appendLetter("a")
+        assertEquals("a",context.getValue())
+
+        context.clear()
+        assertEquals("", context.getValue())
+    }
+
+    @Test
     @JsName("convertToSyllables")
     fun `should convert composable letters into hangul syllable`() {
         assertEquals("안", context.composeHangul("아ㄴ"))
@@ -17,8 +27,6 @@ internal class HangulContextTest {
     @Test
     @JsName("letterByLetterConversion")
     fun `should progressively convert composable letters into hangul syllable`() {
-
-
         context.appendLetter("ㅇ")
         assertEquals("ㅇ", context.getValue())
 
