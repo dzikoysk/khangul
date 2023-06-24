@@ -118,4 +118,13 @@ internal class HangulContextTest {
         assertEquals("안녕하셍", context.getValue())
     }
 
+    /* Special cases */
+
+    @Test
+    @JsName("special1")
+    fun `special 1`() {
+        val context = HangulContext("싟")
+        println(context.decomposeHangul())
+    }
+
 } 

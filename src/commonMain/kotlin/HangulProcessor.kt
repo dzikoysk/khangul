@@ -3,7 +3,7 @@ import kotlin.math.floor
 
 internal object HangulProcessor {
 
-    /* First consonants */
+    /* First consonants (jlt) */
     private val initial = arrayOf(
         'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ',
         'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ',
@@ -11,34 +11,44 @@ internal object HangulProcessor {
     )
     private val initialCodes = initial.map { it.code }.toTypedArray()
 
-    /* Last consonants */
+    /* Last consonants (jtt) */
     private val finale = arrayOf(
         0.toChar(),
         'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ',
         'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'
     )
+    private val decomposedFinales = ",ㄱ,ㄲ,ㄱㅅ,ㄴ,ㄴㅈ,ㄴㅎ,ㄷ,ㄹ,ㄹㄱ,ㄹㅁ,ㄹㅂ,ㄹㅅ,ㄹㅌ,ㄹㅍ,ㄹㅎ,ㅁ,ㅂ,ㅂㅅ,ㅅ,ㅆ,ㅇ,ㅈ,ㅊ,ㅋ,ㅌ,ㅍ,ㅎ".split(",")
     private val finaleCodes = finale.map { it.code }.toTypedArray()
+
+    /* Medial vowels (jlt) */
+    private val medial = arrayOf(
+        'ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ',
+        'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ',
+        'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'
+    )
+    private val medialCodes = medial.map { it.code }.toTypedArray()
 
     /* Relative */
     private val doubledRelativeMedial = arrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 800, 801, 820, 0, 0, 1304, 1305, 1320, 0, 0, 1820)
     /* Relative finale */
     private val doubledRelativeFinale = arrayOf(0, 0, 0, 119, 0, 422, 427, 0, 0, 801, 816, 817, 819, 825, 826, 827, 0, 0, 1719, 0, 1919)
 
-    /* First syllable (가) */
+    /* First syllable (0xAC00/가) */
     private const val SyllableBase = 44032
     /* First vowel (ㅏ) */
     private const val VowelBase = 12623
 
     private const val MedialVowelCount = 21
 
-    /* Initial factor */
+    /* Initial factor (NCount) */
     private const val InitialCount = 588
     /* Medial factor */
     private val TrailingConsonantsCount = finaleCodes.size // 19
-    /* Finale factor */
+    /* Finale factor (TCount) */
     private val LeadingConsonantsCount = initialCodes.size // 28
 
-    private val SyllableCount = LeadingConsonantsCount * MedialVowelCount * TrailingConsonantsCount // (11172) all possible variants
+    /* All possible variants (SCount) */
+    private val SyllableCount = LeadingConsonantsCount * MedialVowelCount * TrailingConsonantsCount // (11172)
 
     init {
         require(LeadingConsonantsCount == 19) { "Initial count must be equal to 19" }
@@ -116,25 +126,46 @@ internal object HangulProcessor {
         return result
     }
 
+//    internal fun decomposeHangul(input: String): String {
+//        var result = ""
+//
+//        for (char in input) {
+//            val syllableIndex = char.code - SyllableBase
+//
+//            if (syllableIndex < 0 || syllableIndex >= SyllableCount) {
+//                result += char // unknown
+//                continue
+//            }
+//
+//            val initialCode = floor(syllableIndex / InitialCount.toDouble()).toInt()
+//            val syllable = floor(((syllableIndex % InitialCount) / TrailingConsonantsCount).toDouble()).toInt()
+//            val finaleCode = syllableIndex % LeadingConsonantsCount
+//
+//            result += fromCharCode(initialCodes[initialCode], medialCodes[syllable])
+//            if (finaleCode != 0) result += decomposedFinales[finaleCode]
+//        }
+//
+//        return result
+//    }
+
     internal fun decomposeHangul(input: String): String {
         var result = ""
 
         for (char in input) {
-            val charCode = char.code
-            val relativeCode = charCode - SyllableBase
+            val syllableIndex = char.code - SyllableBase
 
-            if (relativeCode < 0 || relativeCode >= SyllableCount) {
+            if (syllableIndex < 0 || syllableIndex >= SyllableCount) {
                 result += char // unknown
                 continue
             }
 
-            val initialCode = initialCodes[floor(relativeCode / InitialCount.toDouble()).toInt()]
-            val syllable = VowelBase + (relativeCode % InitialCount) / TrailingConsonantsCount
-            val finaleCode = finaleCodes[relativeCode % TrailingConsonantsCount]
+            val initialCode = initialCodes[floor(syllableIndex / InitialCount.toDouble()).toInt()]
+            val syllable = VowelBase + (syllableIndex % InitialCount) / TrailingConsonantsCount
+            val finaleCode = finaleCodes[syllableIndex % TrailingConsonantsCount]
             result += fromCharCode(initialCode, syllable)
 
             if (finaleCode != 0) {
-                result += fromCharCode(finaleCode)
+                result += decomposedFinales[syllableIndex % TrailingConsonantsCount]
             }
         }
 
