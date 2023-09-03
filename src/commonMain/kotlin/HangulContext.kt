@@ -32,6 +32,10 @@ class HangulContext(
         insertAtCaret(composeHangul(deleted))
     }
 
+    fun appendLetters(vararg letters: String) {
+        letters.forEach { appendLetter(it) }
+    }
+
     fun removeLastLetter() {
         var deleted = deleteAtCaret(1)
 

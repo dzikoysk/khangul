@@ -122,9 +122,24 @@ internal class HangulContextTest {
 
     @Test
     @JsName("special1")
-    fun `special 1`() {
+    fun `gh-7`() {
         val context = HangulContext("싟")
-        println(context.decomposeHangul())
+        assertEquals("ㅅㅣㄱㅅ", context.decomposeHangul())
+
+        context.clear()
+        context.appendLetters("ㅅ", "ㅣ", "ㄱ", "ㅅ")
+        assertEquals("싟", context.getValue())
+    }
+
+    @Test
+    @JsName("special2")
+    fun `gh-9`() {
+        val context = HangulContext("완")
+        assertEquals("ㅇㅗㅏㄴ", context.decomposeHangul())
+
+        context.clear()
+        context.appendLetters("ㅇ", "ㅗ", "ㅏ", "ㄴ")
+        assertEquals("완", context.getValue())
     }
 
 } 

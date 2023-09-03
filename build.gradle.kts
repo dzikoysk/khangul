@@ -5,12 +5,12 @@ import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension
 
 plugins {
-    kotlin("multiplatform") version "1.8.21"
-    id("dev.petuska.npm.publish") version "3.3.1"
+    kotlin("multiplatform") version "1.9.10"
+    id("dev.petuska.npm.publish") version "3.4.1"
 }
 
 group = "com.dzikoysk"
-version = "1.0.9"
+version = "1.0.11"
 
 repositories {
     mavenCentral()

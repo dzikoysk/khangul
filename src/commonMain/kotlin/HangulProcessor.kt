@@ -3,6 +3,11 @@ import kotlin.math.floor
 
 internal object HangulProcessor {
 
+    private class Symbol(
+        val value: Char,
+        val compoundOf: IntArray? = null
+    )
+
     /* First consonants (jlt) */
     private val initial = arrayOf(
         'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ',
@@ -22,11 +27,29 @@ internal object HangulProcessor {
 
     /* Medial vowels (jlt) */
     private val medial = arrayOf(
-        'ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ',
-        'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ',
-        'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ'
+        Symbol('ㅏ'),
+        Symbol('ㅐ'),
+        Symbol('ㅑ'),
+        Symbol('ㅒ'),
+        Symbol('ㅓ'),
+        Symbol('ㅔ'),
+        Symbol('ㅕ'),
+        Symbol('ㅖ'),
+        Symbol('ㅗ'),
+        Symbol('ㅘ', compoundOf = codePointArray('ㅗ', 'ㅏ')),
+        Symbol('ㅙ', compoundOf = codePointArray('ㅗ', 'ㅐ')),
+        Symbol('ㅚ', compoundOf = codePointArray('ㅗ', 'ㅣ')),
+        Symbol('ㅛ'),
+        Symbol('ㅜ'),
+        Symbol('ㅝ', compoundOf = codePointArray('ㅜ', 'ㅓ')),
+        Symbol('ㅞ', compoundOf = codePointArray('ㅜ', 'ㅔ')),
+        Symbol('ㅟ', compoundOf = codePointArray('ㅜ', 'ㅣ')),
+        Symbol('ㅠ'),
+        Symbol('ㅡ'),
+        Symbol('ㅢ', compoundOf = codePointArray('ㅡ', 'ㅣ')),
+        Symbol('ㅣ')
     )
-    private val medialCodes = medial.map { it.code }.toTypedArray()
+    private val medialCodes = medial.map { it.value.code }.toTypedArray()
 
     /* Relative */
     private val doubledRelativeMedial = arrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 800, 801, 820, 0, 0, 1304, 1305, 1320, 0, 0, 1820)
@@ -126,28 +149,6 @@ internal object HangulProcessor {
         return result
     }
 
-//    internal fun decomposeHangul(input: String): String {
-//        var result = ""
-//
-//        for (char in input) {
-//            val syllableIndex = char.code - SyllableBase
-//
-//            if (syllableIndex < 0 || syllableIndex >= SyllableCount) {
-//                result += char // unknown
-//                continue
-//            }
-//
-//            val initialCode = floor(syllableIndex / InitialCount.toDouble()).toInt()
-//            val syllable = floor(((syllableIndex % InitialCount) / TrailingConsonantsCount).toDouble()).toInt()
-//            val finaleCode = syllableIndex % LeadingConsonantsCount
-//
-//            result += fromCharCode(initialCodes[initialCode], medialCodes[syllable])
-//            if (finaleCode != 0) result += decomposedFinales[finaleCode]
-//        }
-//
-//        return result
-//    }
-
     internal fun decomposeHangul(input: String): String {
         var result = ""
 
@@ -162,7 +163,13 @@ internal object HangulProcessor {
             val initialCode = initialCodes[floor(syllableIndex / InitialCount.toDouble()).toInt()]
             val syllable = VowelBase + (syllableIndex % InitialCount) / TrailingConsonantsCount
             val finaleCode = finaleCodes[syllableIndex % TrailingConsonantsCount]
-            result += fromCharCode(initialCode, syllable)
+
+            val syllableStructure = medial
+                .firstOrNull { it.value.code == syllable }
+                ?.compoundOf
+                ?: intArrayOf(syllable)
+
+            result += fromCharCode(initialCode, *syllableStructure)
 
             if (finaleCode != 0) {
                 result += decomposedFinales[syllableIndex % TrailingConsonantsCount]
@@ -184,3 +191,6 @@ private fun fromCharCode(vararg codePoints: Int): String {
     }
     return builder.toString()
 }
+
+private fun codePointArray(vararg chars: Char): IntArray =
+    chars.map { it.code }.toIntArray()
