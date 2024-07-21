@@ -4,7 +4,7 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @JsExport
-@Suppress("unused")
+@Suppress("unused", "MemberVisibilityCanBePrivate")
 object Hangul {
 
     class Letter(
@@ -56,7 +56,7 @@ object Hangul {
         Letter("ㅢ", "ui"),
     )
 
-    val tenseConstanants = listOf(
+    val tenseConsonants = listOf(
         Letter("ㄲ", "kk"),
         Letter("ㄸ", "tt"),
         Letter("ㅃ", "pp"),
@@ -68,6 +68,6 @@ object Hangul {
         consonants + vowels
 
     fun getAll(): List<Letter> =
-        consonants + tenseConstanants + vowels + combinationVowels
+        consonants + tenseConsonants + vowels + combinationVowels
 
 }
