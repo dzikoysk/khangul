@@ -3,12 +3,12 @@ import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension
 
 plugins {
-    kotlin("multiplatform") version "2.0.0"
-    id("dev.petuska.npm.publish") version "3.4.2"
+    kotlin("multiplatform") version "2.0.10"
+    id("dev.petuska.npm.publish") version "3.4.3"
 }
 
 group = "com.dzikoysk"
-version = "1.0.14"
+version = "1.0.15"
 
 repositories {
     mavenCentral()
@@ -42,7 +42,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("de.cketti.unicode:kotlin-codepoints-deluxe:0.7.0")
+                implementation("de.cketti.unicode:kotlin-codepoints-deluxe:0.9.0")
             }
         }
         val commonTest by getting {
