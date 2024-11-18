@@ -3,12 +3,12 @@ import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension
 
 plugins {
-    kotlin("multiplatform") version "2.0.10"
+    kotlin("multiplatform") version "2.0.21"
     id("dev.petuska.npm.publish") version "3.4.3"
 }
 
 group = "com.dzikoysk"
-version = "1.0.15"
+version = "1.0.16"
 
 repositories {
     mavenCentral()
