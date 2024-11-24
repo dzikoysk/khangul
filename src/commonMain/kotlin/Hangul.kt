@@ -2,6 +2,7 @@
 
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.random.Random
 
 @JsExport
 @Suppress("unused", "MemberVisibilityCanBePrivate")
@@ -63,6 +64,34 @@ object Hangul {
         Letter("ㅆ", "ss"),
         Letter("ㅉ", "jj"),
     )
+
+    fun generateRandomSyllable(): String {
+        val ctx = HangulContext()
+
+        if (Random.nextBoolean()) {
+            ctx.appendLetters(consonants.random().koreanLetter)
+        } else {
+            ctx.appendLetter("ㅇ")
+        }
+
+        ctx.appendLetters(vowels.random().koreanLetter)
+
+        if (Random.nextBoolean()) {
+            ctx.appendLetters(combinationVowels.random().koreanLetter)
+        }
+
+        if (Random.nextDouble() < 0.3) {
+            ctx.appendLetters(tenseConsonants.random().koreanLetter)
+        }
+
+        val result = ctx.getValue()
+
+        if (result.length > 1) {
+            return generateRandomSyllable()
+        }
+
+        return result
+    }
 
     fun getBasicLetters(): List<Letter> =
         consonants + vowels

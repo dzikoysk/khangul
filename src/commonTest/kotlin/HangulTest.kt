@@ -16,4 +16,13 @@ class HangulTest {
         assertEquals(14, Hangul.consonants.size)
     }
 
+    @Test
+    @JsName("random")
+    fun `should generate random single letter symbols`() {
+        repeat(50) {
+            val symbol = Hangul.generateRandomSyllable().also { print(" $it ") }
+            assertEquals(1, symbol.length)
+        }
+    }
+
 }

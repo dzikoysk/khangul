@@ -29,10 +29,32 @@ console.log(hangulContext.getValue()) // ''
 khangulContext.appendLetter('ㅇ')
 khangulContext.appendLetter('ㅏ')
 khangulContext.appendLetter('ㄴ')
-console.log(hangulContext.getValue()) // 안
+console.log(hangulContext.getValue()) // 안[Hangul.kt](src%2FcommonMain%2Fkotlin%2FHangul.kt)
 
 khangulContext.removeLastLetter()
 console.log(hangulContext.getValue()) // 아
+```
+
+### Utilities
+
+```typescript
+Hangul.consonants
+// output: ['ㄱ', 'ㄴ', 'ㄷ', ...]
+
+Hangul.vowels
+// output: ['ㅏ', 'ㅑ', 'ㅓ', ...]
+
+Hangul.combinationVowels
+// output: ['ㅐ', 'ㅒ', 'ㅔ', ...]
+
+Hangul.tenseConsonants
+// output: ['ㄲ', 'ㄸ', 'ㅃ', ...]
+
+Hangul.getAll()
+// output [ ...consonants, ...tenseConsonants, ...vowels, ...combinationVowels ]
+
+Hangul.generateRandomSyllable()
+// example output: 벼, 으, 뷰, 티, 이, 포, 쥬, 슜, 우 
 ```
 
 ### Use-cases
