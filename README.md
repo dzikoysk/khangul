@@ -29,7 +29,7 @@ console.log(hangulContext.getValue()) // ''
 khangulContext.appendLetter('ㅇ')
 khangulContext.appendLetter('ㅏ')
 khangulContext.appendLetter('ㄴ')
-console.log(hangulContext.getValue()) // 안[Hangul.kt](src%2FcommonMain%2Fkotlin%2FHangul.kt)
+console.log(hangulContext.getValue()) // 안
 
 khangulContext.removeLastLetter()
 console.log(hangulContext.getValue()) // 아
