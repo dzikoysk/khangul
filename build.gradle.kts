@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "com.dzikoysk"
-version = "1.0.17"
+version = "1.0.18"
 
 repositories {
     mavenCentral()
@@ -64,6 +64,7 @@ npmPublish {
         named("js") {
             packageJson {
                 description.set("Hangul processor for Kotlin Multiplatform & JavaScript projects, based on reverse-engineered Branah keyboard algorithm")
+                license.set("Apache-2.0")
                 author {
                     name.set("dzikoysk")
                 }
