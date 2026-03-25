@@ -3,8 +3,8 @@ import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin
 import org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension
 
 plugins {
-    kotlin("multiplatform") version "2.1.10"
-    id("dev.petuska.npm.publish") version "3.4.3"
+    kotlin("multiplatform") version "2.3.20"
+    id("dev.petuska.npm.publish") version "3.5.3"
 }
 
 group = "com.dzikoysk"
@@ -21,8 +21,6 @@ kotlin {
         binaries.library()
     }
     jvm {
-        withJava()
-
         compilations {
             java {
                 toolchain {
@@ -42,7 +40,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("de.cketti.unicode:kotlin-codepoints-deluxe:0.9.0")
+                implementation("de.cketti.unicode:kotlin-codepoints-deluxe:0.11.0")
             }
         }
         val commonTest by getting {
