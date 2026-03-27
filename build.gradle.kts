@@ -85,6 +85,15 @@ npmPublish {
     }
 }
 
+tasks.register<Copy>("copyJsToDocs") {
+    dependsOn("jsBrowserProductionLibraryDistribution")
+    from("build/dist/js/productionLibrary") {
+        include("*.js")
+        exclude("index.html")
+    }
+    into("docs/lib")
+}
+
 tasks.register("publishNpm") {
     dependsOn(
         "clean",

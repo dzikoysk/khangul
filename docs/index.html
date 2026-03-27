@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Khangul - Hangul Drawing Tool</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+h1 { font-size: 1.4rem; margin-bottom: 12px; color: #fff; }
+.container { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; max-width: 900px; }
+.canvas-panel { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+canvas { border: 2px solid #333; border-radius: 8px; cursor: crosshair; touch-action: none; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+button { padding: 8px 16px; border: 1px solid #444; border-radius: 6px; background: #2a2a4a; color: #e0e0e0; cursor: pointer; font-size: 0.85rem; transition: background 0.15s; }
+button:hover { background: #3a3a6a; }
+button:disabled { opacity: 0.4; cursor: default; }
+.results-panel { min-width: 280px; max-width: 360px; }
+.result-list { display: flex; flex-direction: column; gap: 4px; max-height: 520px; overflow-y: auto; }
+.result-item { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 6px; background: #2a2a4a; font-size: 0.9rem; }
+.result-item.top { background: #2a4a2a; border: 1px solid #4a8a4a; }
+.result-char { font-size: 1.6rem; min-width: 36px; text-align: center; }
+.result-name { flex: 1; font-size: 0.8rem; color: #aaa; }
+.result-score { font-weight: bold; min-width: 42px; text-align: right; }
+.bar-bg { flex: 1; height: 6px; background: #333; border-radius: 3px; min-width: 60px; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width 0.2s; }
+.stroke-info { font-size: 0.8rem; color: #888; margin-top: 4px; }
+.download-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #333; }
+.download-section label { font-size: 0.85rem; margin-right: 8px; }
+.download-section input { background: #2a2a4a; border: 1px solid #444; color: #e0e0e0; padding: 4px 8px; border-radius: 4px; width: 60px; font-size: 0.85rem; }
+.download-section select { background: #2a2a4a; border: 1px solid #444; color: #e0e0e0; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; }
+.download-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.canvas-wrapper { position: relative; }
+.guide-overlay { position: absolute; pointer-events: none; top: 0; left: 0; }
+.tab-bar { display: flex; gap: 4px; margin-bottom: 8px; }
+.tab { padding: 4px 12px; border-radius: 4px 4px 0 0; background: #2a2a4a; border: 1px solid #333; border-bottom: none; cursor: pointer; font-size: 0.8rem; color: #aaa; }
+.tab.active { background: #3a3a6a; color: #fff; }
+</style>
+</head>
+<body>
+
+<h1>Khangul Drawing Tool</h1>
+
+<div class="container">
+  <div class="canvas-panel">
+    <div class="canvas-wrapper">
+      <canvas id="drawCanvas" width="400" height="400"></canvas>
+      <canvas id="guideCanvas" class="guide-overlay" width="400" height="400"></canvas>
+    </div>
+    <div class="stroke-info" id="strokeInfo">Draw a Hangul letter</div>
+    <div class="controls">
+      <button id="undoBtn" disabled>Undo Stroke</button>
+      <button id="clearBtn">Clear</button>
+    </div>
+  </div>
+
+  <div class="results-panel">
+    <div class="tab-bar">
+      <div class="tab active" data-tab="results">Results</div>
+      <div class="tab" data-tab="download">Download</div>
+    </div>
+
+    <div id="resultsTab">
+      <div class="result-list" id="resultList">
+        <div style="color:#666; font-size:0.85rem;">Results will appear here after drawing</div>
+      </div>
+    </div>
+
+    <div id="downloadTab" style="display:none;">
+      <div class="download-section">
+        <div class="download-row">
+          <label>Letter:</label>
+          <select id="letterSelect"></select>
+        </div>
+        <div class="download-row">
+          <label>Variant:</label>
+          <input id="variantInput" type="number" value="1" min="1">
+        </div>
+        <div class="download-row">
+          <button id="downloadJsonBtn" disabled>Download JSON</button>
+          <button id="downloadPngBtn" disabled>Download PNG</button>
+          <button id="downloadBothBtn" disabled>Download Both</button>
+        </div>
+        <div style="font-size:0.75rem; color:#666; margin-top:8px;">
+          Files save as <code>{letter}/synthetic_{n}.json</code> and <code>.png</code>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Khangul library (Kotlin/JS) -->
+<script src="lib/kotlin-kotlin-stdlib.js"></script>
+<script src="lib/kotlin-codepoints-parent-kotlin-codepoints.js"></script>
+<script src="lib/kotlin-codepoints-parent-kotlin-codepoints-deluxe.js"></script>
+<script src="lib/kotlin_org_jetbrains_kotlin_kotlin_dom_api_compat.js"></script>
+<script src="lib/khangul.js"></script>
+
+<script>
+// ============================================================================
+// Library bindings
+// ============================================================================
+
+const khangul = globalThis['com.dzikoysk:khangul'];
+const { DrawingPoint, HangulRecognizer } = khangul.experimental.recognition;
+const Letters = khangul.Letters;
+
+const recognizer = new HangulRecognizer();
+const allLetters = recognizer.getAllLetters();
+
+// ============================================================================
+// Canvas drawing & UI
+// ============================================================================
+
+const canvas = document.getElementById('drawCanvas');
+const ctx = canvas.getContext('2d');
+const guideCanvas = document.getElementById('guideCanvas');
+const guideCtx = guideCanvas.getContext('2d');
+const CANVAS_SIZE = 400;
+const SCALE = CANVAS_SIZE / 100;
+const DRAW_COLOR = '#6c63ff';
+
+// Colors used only for PNG export (matching PreviewGenerator)
+const STROKE_COLORS = ['#e53935','#1e88e5','#43a047','#fb8c00','#8e24aa','#00acc1','#d81b60','#827717'];
+
+let paths = []; // array of arrays of DrawingPoint (0-100 space)
+let currentPath = null;
+let isDrawing = false;
+
+function drawGrid() {
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  ctx.strokeStyle = 'rgba(128,128,128,0.08)';
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(CANVAS_SIZE/2, 0); ctx.lineTo(CANVAS_SIZE/2, CANVAS_SIZE);
+  ctx.moveTo(0, CANVAS_SIZE/2); ctx.lineTo(CANVAS_SIZE, CANVAS_SIZE/2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function redraw() {
+  drawGrid();
+  ctx.strokeStyle = DRAW_COLOR;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.globalAlpha = 0.9;
+  for (const path of paths) drawUserPath(path);
+  if (currentPath && currentPath.length > 1) drawUserPath(currentPath);
+  ctx.globalAlpha = 1;
+}
+
+function drawUserPath(path) {
+  if (path.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(path[0].x * SCALE, path[0].y * SCALE);
+  for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x * SCALE, path[i].y * SCALE);
+  ctx.stroke();
+}
+
+function drawGuide(letter) {
+  guideCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  const strokes = recognizer.getReferenceStrokes(letter);
+  if (!strokes) return;
+  guideCtx.globalAlpha = 0.2;
+  guideCtx.strokeStyle = 'rgba(160,160,180,0.5)';
+  guideCtx.lineWidth = 6;
+  guideCtx.lineCap = 'round';
+  guideCtx.lineJoin = 'round';
+  for (const stroke of strokes) {
+    const pts = recognizer.sampleReferenceStroke(stroke, 40);
+    guideCtx.beginPath();
+    guideCtx.moveTo(pts[0].x * SCALE, pts[0].y * SCALE);
+    for (let i = 1; i < pts.length; i++) guideCtx.lineTo(pts[i].x * SCALE, pts[i].y * SCALE);
+    guideCtx.stroke();
+  }
+  guideCtx.globalAlpha = 1;
+}
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = CANVAS_SIZE / rect.width;
+  const scaleY = CANVAS_SIZE / rect.height;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const px = (clientX - rect.left) * scaleX;
+  const py = (clientY - rect.top) * scaleY;
+  return new DrawingPoint(px / SCALE, py / SCALE);
+}
+
+function finishStroke() {
+  if (!isDrawing) return;
+  isDrawing = false;
+  if (currentPath && currentPath.length >= 2) {
+    paths.push(currentPath);
+    currentPath = null;
+    redraw();
+    runRecognition();
+  }
+  currentPath = null;
+}
+
+canvas.addEventListener('pointerdown', e => {
+  isDrawing = true;
+  currentPath = [getPos(e)];
+  canvas.setPointerCapture(e.pointerId);
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (!isDrawing) return;
+  currentPath.push(getPos(e));
+  redraw();
+});
+
+canvas.addEventListener('pointerup', finishStroke);
+canvas.addEventListener('pointerleave', finishStroke);
+
+// Undo
+document.getElementById('undoBtn').addEventListener('click', () => {
+  if (paths.length) {
+    paths.pop();
+    redraw();
+    if (paths.length) runRecognition();
+    else resetUI();
+  }
+});
+
+// Clear
+document.getElementById('clearBtn').addEventListener('click', () => {
+  paths = [];
+  currentPath = null;
+  redraw();
+  resetUI();
+});
+
+function resetUI() {
+  document.getElementById('resultList').innerHTML = '<div style="color:#666;font-size:0.85rem;">Results will appear here after drawing</div>';
+  document.getElementById('strokeInfo').textContent = 'Draw a Hangul letter';
+  guideCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  updateDownloadState();
+}
+
+// ============================================================================
+// Recognition (delegates to Kotlin library)
+// ============================================================================
+
+function runRecognition() {
+  const inputPaths = paths.map(p => p.slice());
+  const results = recognizer.recognizeFromArrays(inputPaths);
+
+  const list = document.getElementById('resultList');
+  list.innerHTML = '';
+  document.getElementById('strokeInfo').textContent = `${paths.length} stroke${paths.length!==1?'s':''} drawn`;
+
+  const top10 = results.slice(0, 10);
+  for (let i = 0; i < top10.length; i++) {
+    const r = top10[i];
+    const letter = r.letter;
+    const cov = r.coverage;
+    const div = document.createElement('div');
+    div.className = 'result-item' + (i === 0 ? ' top' : '');
+    div.innerHTML = `
+      <span class="result-char">${letter.character}</span>
+      <span class="result-name">${letter.name}<br><small style="color:#666">${letter.romanization.join('/')}</small></span>
+      <div class="bar-bg"><div class="bar-fill" style="width:${cov}%;background:${cov>=40?'#4a8a4a':'#8a4a4a'}"></div></div>
+      <span class="result-score" style="color:${cov>=40?'#6f6':'#f66'}">${cov}%</span>
+    `;
+    list.appendChild(div);
+  }
+
+  if (top10.length && top10[0].coverage >= 20) {
+    drawGuide(top10[0].letter);
+    document.getElementById('letterSelect').value = top10[0].letter.character;
+  }
+
+  updateDownloadState();
+}
+
+function updateDownloadState() {
+  const has = paths.length > 0;
+  document.getElementById('undoBtn').disabled = !has;
+  document.getElementById('downloadJsonBtn').disabled = !has;
+  document.getElementById('downloadPngBtn').disabled = !has;
+  document.getElementById('downloadBothBtn').disabled = !has;
+}
+
+// ============================================================================
+// Download
+// ============================================================================
+
+function getTestdataJson() {
+  const letter = document.getElementById('letterSelect').value;
+  return JSON.stringify({
+    letter,
+    paths: paths.map(p => p.map(pt => ({ x: Math.round(pt.x*100)/100, y: Math.round(pt.y*100)/100 })))
+  }, null, 2);
+}
+
+function renderPng() {
+  const c = document.createElement('canvas');
+  c.width = 400; c.height = 400;
+  const cx = c.getContext('2d');
+  cx.fillStyle = '#f5f5fa';
+  cx.fillRect(0, 0, 400, 400);
+  cx.strokeStyle = '#ddd';
+  cx.setLineDash([4,4]);
+  cx.lineWidth = 1;
+  cx.beginPath();
+  cx.moveTo(200,0); cx.lineTo(200,400);
+  cx.moveTo(0,200); cx.lineTo(400,200);
+  cx.stroke();
+  cx.setLineDash([]);
+  for (let i = 0; i < paths.length; i++) {
+    const path = paths[i];
+    if (path.length < 2) continue;
+    const color = STROKE_COLORS[i % STROKE_COLORS.length];
+    cx.strokeStyle = color;
+    cx.lineWidth = 3.5;
+    cx.lineCap = 'round';
+    cx.lineJoin = 'round';
+    cx.beginPath();
+    cx.moveTo(path[0].x*4, path[0].y*4);
+    for (let j=1; j<path.length; j++) cx.lineTo(path[j].x*4, path[j].y*4);
+    cx.stroke();
+    cx.fillStyle = color;
+    cx.beginPath();
+    cx.arc(path[0].x*4, path[0].y*4, 6, 0, Math.PI*2);
+    cx.fill();
+    cx.fillStyle = '#fff';
+    cx.font = 'bold 9px sans-serif';
+    cx.textAlign = 'center';
+    cx.textBaseline = 'middle';
+    cx.fillText(String(i+1), path[0].x*4, path[0].y*4);
+    cx.fillStyle = color;
+    cx.globalAlpha = 0.6;
+    cx.beginPath();
+    cx.arc(path[path.length-1].x*4, path[path.length-1].y*4, 3, 0, Math.PI*2);
+    cx.fill();
+    cx.globalAlpha = 1;
+  }
+  const ch = document.getElementById('letterSelect').value;
+  const info = Letters.findByCharacter(ch);
+  if (info) {
+    cx.fillStyle = '#333';
+    cx.font = 'bold 16px sans-serif';
+    cx.textAlign = 'left';
+    cx.textBaseline = 'bottom';
+    cx.fillText(`${info.character} (${info.name})`, 8, 394);
+  }
+  return c;
+}
+
+function downloadFile(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function getFilenames() {
+  const letter = document.getElementById('letterSelect').value;
+  const variant = document.getElementById('variantInput').value || '1';
+  return { letter, base: `synthetic_${variant}` };
+}
+
+document.getElementById('downloadJsonBtn').addEventListener('click', () => {
+  const { letter, base } = getFilenames();
+  downloadFile(new Blob([getTestdataJson()], { type: 'application/json' }), `${letter}_${base}.json`);
+});
+
+document.getElementById('downloadPngBtn').addEventListener('click', () => {
+  const { letter, base } = getFilenames();
+  renderPng().toBlob(blob => downloadFile(blob, `${letter}_${base}.png`), 'image/png');
+});
+
+document.getElementById('downloadBothBtn').addEventListener('click', () => {
+  const { letter, base } = getFilenames();
+  downloadFile(new Blob([getTestdataJson()], { type: 'application/json' }), `${letter}_${base}.json`);
+  renderPng().toBlob(blob => downloadFile(blob, `${letter}_${base}.png`), 'image/png');
+});
+
+// ============================================================================
+// Tabs & init
+// ============================================================================
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('resultsTab').style.display = tab.dataset.tab === 'results' ? '' : 'none';
+    document.getElementById('downloadTab').style.display = tab.dataset.tab === 'download' ? '' : 'none';
+  });
+});
+
+const sel = document.getElementById('letterSelect');
+for (const letter of allLetters) {
+  const opt = document.createElement('option');
+  opt.value = letter.character;
+  opt.textContent = `${letter.character} (${letter.name})`;
+  sel.appendChild(opt);
+}
+
+drawGrid();
+updateDownloadState();
+</script>
+</body>
+</html>

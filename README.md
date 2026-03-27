@@ -36,7 +36,7 @@ console.log(hangulContext.getValue()) // 아
 ```
 
 ### Utilities
-
+/
 ```typescript
 Hangul.consonants
 // output: ['ㄱ', 'ㄴ', 'ㄷ', ...]
