@@ -22,29 +22,29 @@
   //endregion
   function appendCodePoint(_this__u8e3s4, codePoint) {
     // Inline function 'kotlin.apply' call
-    if (CodePoints_instance.f9(codePoint)) {
-      _this__u8e3s4.g6(numberToChar(codePoint));
+    if (CodePoints_instance.q7(codePoint)) {
+      _this__u8e3s4.f5(numberToChar(codePoint));
     } else {
-      _this__u8e3s4.g6(CodePoints_instance.d9(codePoint));
-      _this__u8e3s4.g6(CodePoints_instance.e9(codePoint));
+      _this__u8e3s4.f5(CodePoints_instance.o7(codePoint));
+      _this__u8e3s4.f5(CodePoints_instance.p7(codePoint));
     }
     return _this__u8e3s4;
   }
   function CodePoints() {
-    this.x8_1 = 65536;
-    this.y8_1 = 1114111;
-    this.z8_1 = 55296;
-    this.a9_1 = 56320;
-    this.b9_1 = -56613888;
-    this.c9_1 = 55232;
+    this.i7_1 = 65536;
+    this.j7_1 = 1114111;
+    this.k7_1 = 55296;
+    this.l7_1 = 56320;
+    this.m7_1 = -56613888;
+    this.n7_1 = 55232;
   }
-  protoOf(CodePoints).f9 = function (codePoint) {
+  protoOf(CodePoints).q7 = function (codePoint) {
     return (codePoint >>> 16 | 0) === 0;
   };
-  protoOf(CodePoints).d9 = function (codePoint) {
+  protoOf(CodePoints).o7 = function (codePoint) {
     return numberToChar((codePoint >>> 10 | 0) + 55232 | 0);
   };
-  protoOf(CodePoints).e9 = function (codePoint) {
+  protoOf(CodePoints).p7 = function (codePoint) {
     return numberToChar((codePoint & 1023) + 56320 | 0);
   };
   var CodePoints_instance;

@@ -1,6 +1,7 @@
 package experimental.recognition
 
 import Letter
+import Letters
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Font
@@ -65,10 +66,10 @@ class PreviewGenerator {
     fun generateAllSyntheticData() {
         var count = 0
 
-        for (letter in ReferenceData.allLetters) {
+        for (letter in Letters.getAll()) {
             val letterDir = File(baseDir, letter.character).also { it.mkdirs() }
 
-            val hasCircle = ReferenceData.strokes[letter]?.any { it.type == StrokeType.CIRCLE } == true
+            val hasCircle = letter.referenceStrokes.any { it.type == StrokeType.CIRCLE }
 
             // synthetic_1: wobbly circles for letters with circles, clean otherwise
             val primary = SyntheticDrawings.wobblyDrawing(letter, 80)
@@ -97,7 +98,7 @@ class PreviewGenerator {
 
     @Test
     fun generateOverviewGrid() {
-        val allLetters = ReferenceData.allLetters
+        val allLetters = Letters.getAll()
         val cols = 10
         val rows = (allLetters.size + cols - 1) / cols
         val cellSize = 120

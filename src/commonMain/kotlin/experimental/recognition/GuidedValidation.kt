@@ -1,28 +1,22 @@
 package experimental.recognition
 
-import kotlin.math.sqrt
-
-// =============================================================================
-// Guided mode: strict stroke-by-stroke validation
-//
-// Simpler than free draw — user follows a specific stroke in order.
-// Validates start position and coverage of expected path.
-// =============================================================================
+import experimental.recognition.math.*
 
 private const val GUIDED_MIN_POINTS = 4
-private const val GUIDED_START_DISTANCE = 25.0      // max distance from stroke start (in 0-100 space)
-private const val GUIDED_SAMPLE_COUNT = 30           // reference points to check coverage against
-private const val GUIDED_COVERAGE_THRESHOLD = 0.70   // fraction of reference points that must be covered
-private const val GUIDED_THRESHOLD_BASE = 15.0       // base threshold for point-to-point distance
-private const val GUIDED_THRESHOLD_OFFSET = 18.0     // additive offset in threshold calculation
+private const val GUIDED_START_DISTANCE = 25.0
+private const val GUIDED_SAMPLE_COUNT = 30
+private const val GUIDED_COVERAGE_THRESHOLD = 0.70
+private const val GUIDED_THRESHOLD_BASE = 15.0
+private const val GUIDED_THRESHOLD_OFFSET = 18.0
 
 /**
  * Validate a single user-drawn stroke against a reference stroke definition.
  *
- * @param userPoints Points drawn by the user (in canvas pixel coordinates)
- * @param stroke Reference stroke definition (in 0-100 coordinate space)
- * @param canvasSize Canvas dimension in pixels
- * @return true if the stroke is valid (covers ≥70% of the reference path)
+ * Checks two things:
+ * 1. The user started drawing near either end of the reference stroke
+ * 2. At least 70% of the reference path is covered by the user's drawing
+ *
+ * Coordinates: [userPoints] are in canvas pixels, [stroke] is in 0-100 space.
  */
 fun validateStroke(
     userPoints: List<DrawingPoint>,
@@ -34,34 +28,28 @@ fun validateStroke(
     val scale = canvasSize / 100.0
     val expected = sampleStrokePath(stroke, GUIDED_SAMPLE_COUNT)
 
-    // Direction check: user start should be near stroke start
-    val userStart = userPoints.first()
-    val userEnd = userPoints.last()
-    val startDist = distance(
-        DrawingPoint(userStart.x / scale, userStart.y / scale),
-        DrawingPoint(stroke.startX, stroke.startY),
-    )
-    val endDist = distance(
-        DrawingPoint(userEnd.x / scale, userEnd.y / scale),
-        DrawingPoint(stroke.endX, stroke.endY),
-    )
+    val userStart = userPoints.first().toVec2() / scale
+    val userEnd = userPoints.last().toVec2() / scale
+    val strokeStart = Vec2(stroke.startX, stroke.startY)
+    val strokeEnd = Vec2(stroke.endX, stroke.endY)
 
-    if (startDist > GUIDED_START_DISTANCE && endDist > GUIDED_START_DISTANCE) return false
+    if (userStart.distanceTo(strokeStart) > GUIDED_START_DISTANCE &&
+        userEnd.distanceTo(strokeEnd) > GUIDED_START_DISTANCE) return false
 
-    // Coverage check: fraction of expected points covered by user drawing
+    val coverageThreshold = GUIDED_THRESHOLD_BASE * scale * 0.01 * canvasSize * 0.01 + GUIDED_THRESHOLD_OFFSET
     var coveredCount = 0
-    for (ep in expected) {
-        val epScaled = DrawingPoint(ep.x * scale, ep.y * scale)
-        var minDist = Double.MAX_VALUE
-        for (up in userPoints) {
-            val d = distance(epScaled, up)
-            if (d < minDist) minDist = d
+
+    for (expectedPoint in expected) {
+        val scaledExpectedPoint = expectedPoint.toVec2() * scale
+        var minDistance = Double.MAX_VALUE
+        for (userPoint in userPoints) {
+            val distance = scaledExpectedPoint.distanceTo(userPoint.toVec2())
+            if (distance < minDistance) minDistance = distance
         }
-        if (minDist < GUIDED_THRESHOLD_BASE * scale * 0.01 * canvasSize * 0.01 + GUIDED_THRESHOLD_OFFSET) {
+        if (minDistance < coverageThreshold) {
             coveredCount++
         }
     }
 
-    val coverage = coveredCount.toDouble() / expected.size
-    return coverage >= GUIDED_COVERAGE_THRESHOLD
+    return coveredCount.toDouble() / expected.size >= GUIDED_COVERAGE_THRESHOLD
 }

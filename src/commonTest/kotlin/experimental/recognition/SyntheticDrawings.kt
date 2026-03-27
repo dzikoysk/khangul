@@ -1,6 +1,8 @@
 package experimental.recognition
 
 import Letter
+import Letters
+import experimental.recognition.sampleStrokePath
 import kotlin.math.*
 
 /**
@@ -49,7 +51,8 @@ object SyntheticDrawings {
      * Generate a drawing with slight wobble on circles (simulates hand-drawn input).
      */
     fun wobblyDrawing(letter: Letter, pointsPerStroke: Int = 50): List<List<DrawingPoint>> {
-        val strokes = ReferenceData.strokes[letter] ?: return emptyList()
+        val strokes = letter.referenceStrokes.toList()
+        if (strokes.isEmpty()) return emptyList()
         return strokes.map { stroke ->
             if (stroke.type == StrokeType.CIRCLE) {
                 applyCircleWobble(sampleStrokePath(stroke, CIRCLE_POINTS), stroke)
@@ -63,17 +66,18 @@ object SyntheticDrawings {
      * Generate a mathematically clean drawing — no wobble, exact paths.
      */
     fun cleanDrawing(letter: Letter, pointsPerStroke: Int = 50): List<List<DrawingPoint>> {
-        val strokes = ReferenceData.strokes[letter] ?: return emptyList()
+        val strokes = letter.referenceStrokes.toList()
+        if (strokes.isEmpty()) return emptyList()
         return strokes.map { stroke ->
             sampleStrokePath(stroke, if (stroke.type == StrokeType.CIRCLE) CIRCLE_POINTS else pointsPerStroke)
         }
     }
 
     fun allWobblyDrawings(pointsPerStroke: Int = 50): Map<Letter, List<List<DrawingPoint>>> =
-        ReferenceData.allLetters.associateWith { wobblyDrawing(it, pointsPerStroke) }
+        Letters.getAll().associateWith { wobblyDrawing(it, pointsPerStroke) }
 
     fun allCleanDrawings(pointsPerStroke: Int = 50): Map<Letter, List<List<DrawingPoint>>> =
-        ReferenceData.allLetters.associateWith { cleanDrawing(it, pointsPerStroke) }
+        Letters.getAll().associateWith { cleanDrawing(it, pointsPerStroke) }
 
     /** ㅢ with horizontal touching the vertical — must not be confused with ㅓ */
     fun uiConnected(pointsPerStroke: Int = 50): List<List<DrawingPoint>> = listOf(

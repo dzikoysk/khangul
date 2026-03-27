@@ -1,33 +1,6 @@
-@file:OptIn(ExperimentalJsExport::class)
+package experimental.recognition.steps
 
-package experimental.recognition
-
-import Letter
-import kotlin.js.ExperimentalJsExport
-import kotlin.js.JsExport
-
-// --- Input types ---
-
-@JsExport
-data class DrawingPoint(val x: Double, val y: Double)
-
-// --- Reference stroke types ---
-
-@JsExport
-enum class StrokeType { LINE, CURVE, CIRCLE }
-
-@JsExport
-data class ReferenceStroke(
-    val startX: Double,
-    val startY: Double,
-    val endX: Double,
-    val endY: Double,
-    val type: StrokeType,
-    val controlX: Double? = null,
-    val controlY: Double? = null,
-)
-
-// --- Analysis types ---
+import experimental.recognition.DrawingPoint
 
 enum class StrokeDirection { HORIZONTAL, VERTICAL, CIRCLE }
 
@@ -63,25 +36,4 @@ data class StructuralSignature(
     val strokeCount: Int,
     val strokes: List<AnalyzedStroke>,
     val relations: List<List<StrokeRelation>>,
-)
-
-// --- Geometry types ---
-
-data class BoundingBox(
-    val minX: Double,
-    val minY: Double,
-    val maxX: Double,
-    val maxY: Double,
-) {
-    val width: Double get() = maxX - minX
-    val height: Double get() = maxY - minY
-}
-
-// --- Result types ---
-
-@JsExport
-data class RecognitionResult(
-    val letter: Letter,
-    val coverage: Int,
-    val debug: String = "",
 )
