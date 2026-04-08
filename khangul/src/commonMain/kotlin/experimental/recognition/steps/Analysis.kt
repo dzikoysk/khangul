@@ -192,7 +192,7 @@ fun createSignature(paths: List<List<DrawingPoint>>, flexible: Boolean = false):
 }
 
 /**
- * Create signature from reference stroke definitions.
+ * Create signature from reference stroke definitions (flat list of all segments).
  * Unlike user signatures, reference strokes are already clean segments — no splitting needed.
  */
 fun createRefSignature(strokeDefs: List<ReferenceStroke>): StructuralSignature? {
@@ -221,3 +221,10 @@ fun createRefSignature(strokeDefs: List<ReferenceStroke>): StructuralSignature? 
     val relations = buildRelationMatrix(strokes)
     return StructuralSignature(strokes.size, strokes, relations)
 }
+
+/**
+ * Create signature from reference steps (nested array structure).
+ * Flattens to individual segments for structural analysis.
+ */
+fun createRefSignatureFromSteps(steps: Array<Array<ReferenceStroke>>): StructuralSignature? =
+    createRefSignature(steps.flatMap { it.toList() })

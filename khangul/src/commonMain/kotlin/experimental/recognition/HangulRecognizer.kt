@@ -14,7 +14,7 @@ import kotlin.js.JsName
  *
  * Two modes:
  * - Free draw: [recognize] — user draws freely, system identifies the letter
- * - Guided: [validateGuidedStroke] — user follows stroke-by-stroke, system validates each
+ * - Guided: [validateGuidedStroke] — user follows step-by-step, system validates each
  */
 @JsExport
 class HangulRecognizer {
@@ -37,19 +37,33 @@ class HangulRecognizer {
     fun isMatch(paths: Array<Array<DrawingPoint>>, expected: Letter): Boolean =
         isMatch(paths.map { it.toList() }, expected)
 
+    /**
+     * Validate a user-drawn stroke against a step in a letter.
+     * A step may contain multiple connected segments (e.g., ㄴ shape = vertical + horizontal).
+     */
     @JsName("validateGuidedStrokeFromArray")
     fun validateGuidedStroke(
         userPoints: Array<DrawingPoint>,
         letter: Letter,
-        strokeIndex: Int,
+        stepIndex: Int,
         canvasSize: Double,
     ): Boolean {
-        if (strokeIndex !in letter.referenceStrokes.indices) return false
-        return validateStroke(userPoints.toList(), letter.referenceStrokes[strokeIndex], canvasSize)
+        if (stepIndex !in letter.referenceStrokes.indices) return false
+        val segments = letter.referenceStrokes[stepIndex]
+        return validateStep(userPoints.toList(), segments.toList(), canvasSize)
     }
 
+    /** Get all segments flattened — for rendering guides */
     fun getReferenceStrokes(letter: Letter): Array<ReferenceStroke> =
-        letter.referenceStrokes
+        letter.referenceStrokes.flatMap { it.toList() }.toTypedArray()
+
+    /** Get the number of steps (pen down/up actions) for a letter */
+    fun getStepCount(letter: Letter): Int =
+        letter.referenceStrokes.size
+
+    /** Get segments for a specific step */
+    fun getStepSegments(letter: Letter, stepIndex: Int): Array<ReferenceStroke> =
+        letter.referenceStrokes[stepIndex]
 
     fun getAllLetters(): Array<Letter> =
         Letters.getAll().toTypedArray()

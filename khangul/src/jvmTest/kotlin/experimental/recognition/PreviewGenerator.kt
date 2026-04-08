@@ -69,7 +69,7 @@ class PreviewGenerator {
         for (letter in Letters.getAll()) {
             val letterDir = File(baseDir, letter.character).also { it.mkdirs() }
 
-            val hasCircle = letter.referenceStrokes.any { it.type == StrokeType.CIRCLE }
+            val hasCircle = letter.referenceStrokes.any { step -> step.any { it.type == StrokeType.CIRCLE } }
 
             // synthetic_1: wobbly circles for letters with circles, clean otherwise
             val primary = SyntheticDrawings.wobblyDrawing(letter, 80)
@@ -180,12 +180,11 @@ class PreviewGenerator {
         g.drawLine(0, size / 2, size, size / 2)
         g.drawLine(size / 2, 0, size / 2, size)
 
-        // Draw each stroke with a distinct color
+        // Draw stroke lines first, then markers on top
         val strokeWidth = (STROKE_WIDTH * size / IMAGE_SIZE).toFloat()
         for ((strokeIdx, path) in paths.withIndex()) {
             if (path.size < 2) continue
             val color = strokeColors[strokeIdx % strokeColors.size]
-
             g.color = color
             g.stroke = BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
             for (i in 0 until path.size - 1) {
@@ -194,26 +193,98 @@ class PreviewGenerator {
                     (path[i + 1].x * scale).toInt(), (path[i + 1].y * scale).toInt(),
                 )
             }
+        }
 
-            // Start marker: numbered circle
-            val markerR = MARKER_RADIUS * size / IMAGE_SIZE
-            val startX = (path.first().x * scale).toInt()
-            val startY = (path.first().y * scale).toInt()
-            g.color = color
-            g.fillOval(startX - markerR, startY - markerR, markerR * 2, markerR * 2)
+        // Place numbered labels off the stroke lines.
+        // For each start point, try 12 candidate directions and pick the one furthest from all strokes.
+        val markerR = MARKER_RADIUS * size / IMAGE_SIZE
+        val labelDist = markerR + (7 * size / IMAGE_SIZE)
+
+        // Pre-compute all stroke points in pixel space (subsampled for speed)
+        val allStrokePixels = paths.flatMap { path ->
+            path.indices.step(3).map { i ->
+                (path[i].x * scale).toInt() to (path[i].y * scale).toInt()
+            }
+        }
+
+        data class MarkerInfo(
+            val idx: Int, val startX: Int, val startY: Int,
+            val labelX: Int, val labelY: Int, val color: Color,
+        )
+
+        fun minDistToStrokes(x: Int, y: Int): Double =
+            allStrokePixels.minOf { (px, py) ->
+                val dx = (x - px).toDouble()
+                val dy = (y - py).toDouble()
+                kotlin.math.sqrt(dx * dx + dy * dy)
+            }
+
+        val placedLabels = mutableListOf<MarkerInfo>()
+
+        for ((idx, path) in paths.withIndex()) {
+            if (path.size < 2) continue
+            val sx = (path.first().x * scale).toInt()
+            val sy = (path.first().y * scale).toInt()
+            val color = strokeColors[idx % strokeColors.size]
+
+            // Try 12 evenly spaced directions around the start point
+            var bestX = sx
+            var bestY = sy - labelDist // fallback: above
+            var bestScore = -1.0
+
+            for (step in 0 until 12) {
+                val angle = step * kotlin.math.PI * 2.0 / 12.0
+                val cx = sx + (kotlin.math.cos(angle) * labelDist).toInt()
+                val cy = sy + (kotlin.math.sin(angle) * labelDist).toInt()
+
+                // Score = minimum distance from this candidate to any stroke pixel + distance from already placed labels
+                val strokeDist = minDistToStrokes(cx, cy)
+                val labelDist2 = if (placedLabels.isEmpty()) Double.MAX_VALUE
+                    else placedLabels.minOf { other ->
+                        val dx = (cx - other.labelX).toDouble()
+                        val dy = (cy - other.labelY).toDouble()
+                        kotlin.math.sqrt(dx * dx + dy * dy)
+                    }
+                val score = minOf(strokeDist, labelDist2)
+                if (score > bestScore) {
+                    bestScore = score
+                    bestX = cx
+                    bestY = cy
+                }
+            }
+
+            placedLabels.add(MarkerInfo(idx, sx, sy, bestX, bestY, color))
+        }
+
+        // Draw start dots, connecting lines, and numbered labels
+        for (marker in placedLabels) {
+            val dotR = markerR / 2
+            // Small dot at actual start
+            g.color = marker.color
+            g.fillOval(marker.startX - dotR, marker.startY - dotR, dotR * 2, dotR * 2)
+            // Thin line connecting start dot to label
+            g.color = Color(marker.color.red, marker.color.green, marker.color.blue, 120)
+            g.stroke = BasicStroke(1f)
+            g.drawLine(marker.startX, marker.startY, marker.labelX, marker.labelY)
+            // Numbered circle label
+            g.color = marker.color
+            g.fillOval(marker.labelX - markerR, marker.labelY - markerR, markerR * 2, markerR * 2)
             g.color = Color.WHITE
             g.stroke = BasicStroke(1.5f)
-            g.drawOval(startX - markerR, startY - markerR, markerR * 2, markerR * 2)
+            g.drawOval(marker.labelX - markerR, marker.labelY - markerR, markerR * 2, markerR * 2)
             g.font = Font("SansSerif", Font.BOLD, (11 * size / IMAGE_SIZE).coerceAtLeast(8))
-            val text = "${strokeIdx + 1}"
+            val text = "${marker.idx + 1}"
             val fm = g.fontMetrics
-            g.drawString(text, startX - fm.stringWidth(text) / 2, startY + fm.ascent / 2 - 1)
+            g.drawString(text, marker.labelX - fm.stringWidth(text) / 2, marker.labelY + fm.ascent / 2 - 1)
+        }
 
-            // End marker: small filled dot
+        // Draw end markers
+        for ((strokeIdx, path) in paths.withIndex()) {
+            if (path.size < 2) continue
             val endX = (path.last().x * scale).toInt()
             val endY = (path.last().y * scale).toInt()
             val dotR = markerR / 2
-            g.color = color.darker()
+            g.color = strokeColors[strokeIdx % strokeColors.size].darker()
             g.fillOval(endX - dotR, endY - dotR, dotR * 2, dotR * 2)
         }
 

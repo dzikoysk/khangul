@@ -9,6 +9,9 @@ import kotlin.math.*
  * Generate synthetic drawings from reference stroke data for testing.
  * These are "perfect" drawings — exact paths following the reference definitions,
  * with slight noise on circles to simulate real touch input.
+ *
+ * Each step (pen down/up action) produces one path. Steps with multiple connected
+ * segments concatenate their sampled points into a single continuous path.
  */
 object SyntheticDrawings {
 
@@ -48,29 +51,46 @@ object SyntheticDrawings {
     }
 
     /**
-     * Generate a drawing with slight wobble on circles (simulates hand-drawn input).
+     * Sample a single step (one or more connected segments) into a single path of points.
+     * For circle segments, applies wobble when [wobble] is true.
      */
-    fun wobblyDrawing(letter: Letter, pointsPerStroke: Int = 50): List<List<DrawingPoint>> {
-        val strokes = letter.referenceStrokes.toList()
-        if (strokes.isEmpty()) return emptyList()
-        return strokes.map { stroke ->
-            if (stroke.type == StrokeType.CIRCLE) {
-                applyCircleWobble(sampleStrokePath(stroke, CIRCLE_POINTS), stroke)
+    private fun sampleStep(segments: Array<ReferenceStroke>, pointsPerStroke: Int, wobble: Boolean): List<DrawingPoint> {
+        val allPoints = mutableListOf<DrawingPoint>()
+        for (segment in segments) {
+            val points = if (segment.type == StrokeType.CIRCLE) {
+                val sampled = sampleStrokePath(segment, CIRCLE_POINTS)
+                if (wobble) applyCircleWobble(sampled, segment) else sampled
             } else {
-                sampleStrokePath(stroke, pointsPerStroke)
+                sampleStrokePath(segment, pointsPerStroke)
+            }
+            // Skip first point of subsequent segments to avoid duplicate at the junction
+            if (allPoints.isNotEmpty() && points.isNotEmpty()) {
+                allPoints.addAll(points.drop(1))
+            } else {
+                allPoints.addAll(points)
             }
         }
+        return allPoints
+    }
+
+    /**
+     * Generate a drawing with slight wobble on circles (simulates hand-drawn input).
+     * Returns one path per step (not per segment).
+     */
+    fun wobblyDrawing(letter: Letter, pointsPerStroke: Int = 50): List<List<DrawingPoint>> {
+        val steps = letter.referenceStrokes.toList()
+        if (steps.isEmpty()) return emptyList()
+        return steps.map { sampleStep(it, pointsPerStroke, wobble = true) }
     }
 
     /**
      * Generate a mathematically clean drawing — no wobble, exact paths.
+     * Returns one path per step (not per segment).
      */
     fun cleanDrawing(letter: Letter, pointsPerStroke: Int = 50): List<List<DrawingPoint>> {
-        val strokes = letter.referenceStrokes.toList()
-        if (strokes.isEmpty()) return emptyList()
-        return strokes.map { stroke ->
-            sampleStrokePath(stroke, if (stroke.type == StrokeType.CIRCLE) CIRCLE_POINTS else pointsPerStroke)
-        }
+        val steps = letter.referenceStrokes.toList()
+        if (steps.isEmpty()) return emptyList()
+        return steps.map { sampleStep(it, pointsPerStroke, wobble = false) }
     }
 
     fun allWobblyDrawings(pointsPerStroke: Int = 50): Map<Letter, List<List<DrawingPoint>>> =

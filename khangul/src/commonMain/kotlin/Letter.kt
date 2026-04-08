@@ -17,7 +17,7 @@ class Letter(
     val name: String,
     val romanization: Array<String>,
     val category: LetterCategory,
-    val referenceStrokes: Array<experimental.recognition.ReferenceStroke> = emptyArray(),
+    val referenceStrokes: Array<Array<experimental.recognition.ReferenceStroke>> = emptyArray(),
 ) {
 
     override fun toString(): String = character
