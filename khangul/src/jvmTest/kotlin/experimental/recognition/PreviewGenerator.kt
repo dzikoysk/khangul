@@ -196,9 +196,10 @@ class PreviewGenerator {
         }
 
         // Place numbered labels off the stroke lines.
-        // For each start point, try 12 candidate directions and pick the one furthest from all strokes.
+        // For each start point, try many candidates (multiple angles × multiple radii)
+        // and pick the one furthest from all strokes and already-placed labels.
         val markerR = MARKER_RADIUS * size / IMAGE_SIZE
-        val labelDist = markerR + (7 * size / IMAGE_SIZE)
+        val baseDist = markerR + (7 * size / IMAGE_SIZE)
 
         // Pre-compute all stroke points in pixel space (subsampled for speed)
         val allStrokePixels = paths.flatMap { path ->
@@ -220,6 +221,13 @@ class PreviewGenerator {
             }
 
         val placedLabels = mutableListOf<MarkerInfo>()
+        val angleSteps = 16
+        val radii = listOf(baseDist, baseDist + markerR * 2)
+
+        // Collect start positions to detect shared start points
+        val startPositions = paths.withIndex()
+            .filter { (_, p) -> p.size >= 2 }
+            .map { (_, p) -> (p.first().x * scale).toInt() to (p.first().y * scale).toInt() }
 
         for ((idx, path) in paths.withIndex()) {
             if (path.size < 2) continue
@@ -227,45 +235,71 @@ class PreviewGenerator {
             val sy = (path.first().y * scale).toInt()
             val color = strokeColors[idx % strokeColors.size]
 
-            // Try 12 evenly spaced directions around the start point
+            // Check if another stroke shares this start point
+            val hasConflict = startPositions.withIndex().any { (otherIdx, pos) ->
+                otherIdx != idx &&
+                    kotlin.math.abs(pos.first - sx) < markerR * 2 &&
+                    kotlin.math.abs(pos.second - sy) < markerR * 2
+            } || placedLabels.any { other ->
+                kotlin.math.abs(other.labelX - sx) < markerR * 2 &&
+                    kotlin.math.abs(other.labelY - sy) < markerR * 2
+            }
+
+            if (!hasConflict) {
+                // No conflict — place label directly on the start point
+                placedLabels.add(MarkerInfo(idx, sx, sy, sx, sy, color))
+                continue
+            }
+
+            // Direction the stroke goes — bias the label toward this side
+            val ref = path[minOf(path.size / 4, path.lastIndex).coerceAtLeast(1)]
+            val strokeDx = (ref.x * scale) - sx
+            val strokeDy = (ref.y * scale) - sy
+            val strokeLen = kotlin.math.sqrt(strokeDx * strokeDx + strokeDy * strokeDy).coerceAtLeast(1.0)
+            val strokeDirX = strokeDx / strokeLen
+            val strokeDirY = strokeDy / strokeLen
+
             var bestX = sx
-            var bestY = sy - labelDist // fallback: above
+            var bestY = sy - baseDist
             var bestScore = -1.0
 
-            for (step in 0 until 12) {
-                val angle = step * kotlin.math.PI * 2.0 / 12.0
-                val cx = sx + (kotlin.math.cos(angle) * labelDist).toInt()
-                val cy = sy + (kotlin.math.sin(angle) * labelDist).toInt()
+            for (radius in radii) {
+                for (step in 0 until angleSteps) {
+                    val angle = step * kotlin.math.PI * 2.0 / angleSteps
+                    val candDirX = kotlin.math.cos(angle)
+                    val candDirY = kotlin.math.sin(angle)
+                    val cx = sx + (candDirX * radius).toInt()
+                    val cy = sy + (candDirY * radius).toInt()
 
-                // Score = minimum distance from this candidate to any stroke pixel + distance from already placed labels
-                val strokeDist = minDistToStrokes(cx, cy)
-                val labelDist2 = if (placedLabels.isEmpty()) Double.MAX_VALUE
-                    else placedLabels.minOf { other ->
-                        val dx = (cx - other.labelX).toDouble()
-                        val dy = (cy - other.labelY).toDouble()
-                        kotlin.math.sqrt(dx * dx + dy * dy)
+                    val strokeDist = minDistToStrokes(cx, cy)
+                    val labelClearance = if (placedLabels.isEmpty()) Double.MAX_VALUE
+                        else placedLabels.minOf { other ->
+                            val dx = (cx - other.labelX).toDouble()
+                            val dy = (cy - other.labelY).toDouble()
+                            kotlin.math.sqrt(dx * dx + dy * dy)
+                        }
+                    val clearance = minOf(strokeDist, labelClearance)
+                    // Bonus for being on the same side as the stroke direction
+                    val dot = candDirX * strokeDirX + candDirY * strokeDirY
+                    val directionBonus = (1.0 + dot * 0.5) // range 0.5–1.5
+                    val score = clearance * directionBonus
+                    if (score > bestScore) {
+                        bestScore = score
+                        bestX = cx
+                        bestY = cy
                     }
-                val score = minOf(strokeDist, labelDist2)
-                if (score > bestScore) {
-                    bestScore = score
-                    bestX = cx
-                    bestY = cy
                 }
             }
 
             placedLabels.add(MarkerInfo(idx, sx, sy, bestX, bestY, color))
         }
 
-        // Draw start dots, connecting lines, and numbered labels
+        // Draw start dots and numbered labels
         for (marker in placedLabels) {
             val dotR = markerR / 2
             // Small dot at actual start
             g.color = marker.color
             g.fillOval(marker.startX - dotR, marker.startY - dotR, dotR * 2, dotR * 2)
-            // Thin line connecting start dot to label
-            g.color = Color(marker.color.red, marker.color.green, marker.color.blue, 120)
-            g.stroke = BasicStroke(1f)
-            g.drawLine(marker.startX, marker.startY, marker.labelX, marker.labelY)
             // Numbered circle label
             g.color = marker.color
             g.fillOval(marker.labelX - markerR, marker.labelY - markerR, markerR * 2, markerR * 2)
@@ -278,11 +312,16 @@ class PreviewGenerator {
             g.drawString(text, marker.labelX - fm.stringWidth(text) / 2, marker.labelY + fm.ascent / 2 - 1)
         }
 
-        // Draw end markers
+        // Draw end markers (skip if overlapping a label)
         for ((strokeIdx, path) in paths.withIndex()) {
             if (path.size < 2) continue
             val endX = (path.last().x * scale).toInt()
             val endY = (path.last().y * scale).toInt()
+            val hitsLabel = placedLabels.any { m ->
+                kotlin.math.abs(endX - m.labelX) < markerR &&
+                    kotlin.math.abs(endY - m.labelY) < markerR
+            }
+            if (hitsLabel) continue
             val dotR = markerR / 2
             g.color = strokeColors[strokeIdx % strokeColors.size].darker()
             g.fillOval(endX - dotR, endY - dotR, dotR * 2, dotR * 2)

@@ -175,9 +175,9 @@ object Letters {
         arrayOf(ReferenceStroke(45.0, 45.0, 65.0, 45.0, LINE)),
     ))
     val ㅕ = Letter("ㅕ", "yeo", arrayOf("yeo"), VOWEL, arrayOf(
-        arrayOf(ReferenceStroke(70.0, 10.0, 70.0, 90.0, LINE)),
         arrayOf(ReferenceStroke(50.0, 35.0, 70.0, 35.0, LINE)),
         arrayOf(ReferenceStroke(50.0, 60.0, 70.0, 60.0, LINE)),
+        arrayOf(ReferenceStroke(70.0, 10.0, 70.0, 90.0, LINE)),
     ))
     val ㅗ = Letter("ㅗ", "o", arrayOf("o"), VOWEL, arrayOf(
         arrayOf(ReferenceStroke(50.0, 37.0, 50.0, 55.0, LINE)),
@@ -214,8 +214,8 @@ object Letters {
         arrayOf(ReferenceStroke(60.0, 10.0, 60.0, 90.0, LINE)),
     ))
     val ㅔ = Letter("ㅔ", "e", arrayOf("e"), COMPLEX_VOWEL, arrayOf(
-        arrayOf(ReferenceStroke(40.0, 10.0, 40.0, 90.0, LINE)),
         arrayOf(ReferenceStroke(25.0, 45.0, 40.0, 45.0, LINE)),
+        arrayOf(ReferenceStroke(40.0, 10.0, 40.0, 90.0, LINE)),
         arrayOf(ReferenceStroke(60.0, 10.0, 60.0, 90.0, LINE)),
     ))
     val ㅒ = Letter("ㅒ", "yae", arrayOf("yae"), COMPLEX_VOWEL, arrayOf(
@@ -225,9 +225,9 @@ object Letters {
         arrayOf(ReferenceStroke(58.0, 10.0, 58.0, 90.0, LINE)),
     ))
     val ㅖ = Letter("ㅖ", "ye", arrayOf("ye"), COMPLEX_VOWEL, arrayOf(
-        arrayOf(ReferenceStroke(42.0, 10.0, 42.0, 90.0, LINE)),
         arrayOf(ReferenceStroke(22.0, 35.0, 42.0, 35.0, LINE)),
         arrayOf(ReferenceStroke(22.0, 60.0, 42.0, 60.0, LINE)),
+        arrayOf(ReferenceStroke(42.0, 10.0, 42.0, 90.0, LINE)),
         arrayOf(ReferenceStroke(62.0, 10.0, 62.0, 90.0, LINE)),
     ))
     val ㅘ = Letter("ㅘ", "wa", arrayOf("wa"), COMPLEX_VOWEL, arrayOf(
