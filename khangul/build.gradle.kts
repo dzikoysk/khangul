@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.dzikoysk"
-version = "1.0.18"
+version = "1.1.0"
 
 repositories {
     mavenCentral()

@@ -14,6 +14,9 @@ data class BoundingBox(
 
     val center: Vec2 get() = Vec2(minX + width / 2.0, minY + height / 2.0)
 
-    /** Normalize a point into 0..1 space relative to this bounding box's scale. */
-    fun normalize(point: Vec2): Vec2 = Vec2((point.x - minX) / scale, (point.y - minY) / scale)
+    /** Normalize a point into 0..1 × 0..1 unit square (each axis scaled independently). */
+    fun normalize(point: Vec2): Vec2 = Vec2(
+        if (width > 0) (point.x - minX) / width else 0.5,
+        if (height > 0) (point.y - minY) / height else 0.5,
+    )
 }

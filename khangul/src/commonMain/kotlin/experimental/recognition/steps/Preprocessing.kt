@@ -12,13 +12,15 @@ private const val CIRCLE_ASPECT_MAX = 2.0
 private const val CIRCLE_RADIUS_VARIANCE_MAX = 0.40
 private const val CIRCLE_SAMPLE_COUNT = 60
 private const val CIRCLE_CORNER_ANGLE = 35.0
-private const val CIRCLE_STRAIGHT_RATIO_MAX = 0.15
+private const val CIRCLE_STRAIGHT_RATIO_MAX = 0.20
 private const val CIRCLE_MAX_CORNERS = 3
 private const val CIRCLE_MAX_GAPS = 3
 private const val CIRCLE_GAP_MAX_SINGLE = 0.15
 private const val CIRCLE_GAP_MAX_TOTAL_RATIO = 0.25
 private const val CIRCLE_GAP_MIN_THRESHOLD = 0.02
 private const val CIRCLE_STRAIGHT_ANGLE = 10.0
+private const val CIRCLE_ARC_SECTORS = 16
+private const val CIRCLE_MIN_ARC_COVERAGE = 0.75
 
 private const val CORNER_ANGLE_THRESHOLD = 50.0
 private const val CORNER_CUMULATIVE_THRESHOLD = 60.0
@@ -72,7 +74,18 @@ fun detectCircularPattern(segments: List<List<DrawingPoint>>, bbox: BoundingBox)
 
     val firstPoint = segments.first().first().toVec2()
     val lastPoint = segments.last().last().toVec2()
-    if (firstPoint.distanceTo(lastPoint) > scale * CIRCLE_CLOSURE_THRESHOLD) return false
+    if (firstPoint.distanceTo(lastPoint) > scale * CIRCLE_CLOSURE_THRESHOLD) {
+        // Not tightly closed – accept if the arc covers most of the circle (handles overshoot and open arcs)
+        val center = bbox.center
+        val covered = BooleanArray(CIRCLE_ARC_SECTORS)
+        for (p in allPoints) {
+            val v = p.toVec2()
+            val angle = atan2(v.y - center.y, v.x - center.x)
+            val sector = ((angle + PI) / (2 * PI) * CIRCLE_ARC_SECTORS).toInt().coerceIn(0, CIRCLE_ARC_SECTORS - 1)
+            covered[sector] = true
+        }
+        if (covered.count { it }.toDouble() / CIRCLE_ARC_SECTORS < CIRCLE_MIN_ARC_COVERAGE) return false
+    }
 
     val aspectRatio = bbox.width / (bbox.height.let { if (it == 0.0) 1.0 else it })
     if (aspectRatio < CIRCLE_ASPECT_MIN || aspectRatio > CIRCLE_ASPECT_MAX) return false
@@ -87,7 +100,7 @@ fun detectCircularPattern(segments: List<List<DrawingPoint>>, bbox: BoundingBox)
 
     // Sample evenly spaced triplets and measure the angle change between them.
     // Circles have smooth curvature; polygons have sharp corners and straight runs.
-    val step = maxOf(1, allPoints.size / CIRCLE_SAMPLE_COUNT)
+    val step = maxOf(2, allPoints.size / CIRCLE_SAMPLE_COUNT)
     var cornerCount = 0
     var straightSectionLength = 0
     var maxStraightSection = 0

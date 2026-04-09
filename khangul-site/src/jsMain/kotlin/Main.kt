@@ -6,7 +6,9 @@ import kotlinx.browser.document
 import org.w3c.dom.*
 
 fun main() {
-    document.addEventListener("DOMContentLoaded", { KhangulApp().start() })
+    document.addEventListener("DOMContentLoaded", {
+        KhangulApp().start()
+    })
 }
 
 class KhangulApp {
@@ -117,7 +119,7 @@ class KhangulApp {
         downloadBtns = listOf(jsonBtn, pngBtn, bothBtn)
 
         section.appendDiv("download-hint").apply {
-            innerHTML = """Files save as <code>{letter}/synthetic_{n}.json</code> and <code>.png</code>"""
+            innerHTML = """Files save as <code>{letter}/captured_{n}.json</code> and <code>.png</code>"""
         }
     }
 
@@ -192,7 +194,7 @@ class KhangulApp {
 
     private fun selectedLetter(): String = letterSelect.value
     private fun selectedVariant(): String = variantInput.value.ifEmpty { "1" }
-    private fun exportFilename(ext: String): String = "${selectedLetter()}_synthetic_${selectedVariant()}.$ext"
+    private fun exportFilename(ext: String): String = "${selectedLetter()}_captured_${selectedVariant()}.$ext"
 
     private fun downloadJson() {
         val json = TestdataExport.toJson(selectedLetter(), drawingCanvas.paths)

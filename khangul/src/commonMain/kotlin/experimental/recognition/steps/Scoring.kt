@@ -7,11 +7,13 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 // Final score = weighted sum of (count, distribution, direction, position, relation) × unmapped penalty
-private const val WEIGHT_COUNT = 0.10
-private const val WEIGHT_DISTRIBUTION = 0.10
-private const val WEIGHT_DIRECTION = 0.20
-private const val WEIGHT_POSITION = 0.25
-private const val WEIGHT_RELATION = 0.35
+// Spatial components (position + relation) dominate so that letters differing only
+// in stroke arrangement (mirrors, inversions) are clearly separated.
+private const val WEIGHT_COUNT = 0.05
+private const val WEIGHT_DISTRIBUTION = 0.05
+private const val WEIGHT_DIRECTION = 0.10
+private const val WEIGHT_POSITION = 0.30
+private const val WEIGHT_RELATION = 0.50
 
 
 private const val COUNT_PENALTY_PER_DIFF = 0.40
@@ -24,6 +26,7 @@ private const val HV_BOUNDARY_CREDIT = 0.30
 private const val HV_BOUNDARY_ANGLE = 20.0
 private const val RELATION_FALLBACK = 0.30
 private const val CONNECTION_MISMATCH_PENALTY = -0.30
+private const val POSITION_INVERSION_PENALTY = -0.60
 
 
 private const val RELATION_H_WEIGHT = 0.25
@@ -66,7 +69,9 @@ fun compareSignatures(user: StructuralSignature, ref: StructuralSignature): Comp
 
     val maxStrokeCount = maxOf(user.strokeCount, ref.strokeCount)
     val totalUnmapped = (user.strokeCount - finalMapping.size) + (ref.strokeCount - finalMapping.size)
-    val directionScore = if (maxStrokeCount > 0) finalMapping.sumOf { it.score } / maxStrokeCount else 0.0
+    val directionScore = if (maxStrokeCount > 0) finalMapping.sumOf { m ->
+        scoreDirectionMatch(ref.strokes[m.refIdx], user.strokes[m.userIdx])
+    } / maxStrokeCount else 0.0
     val unmappedPenalty = linearFalloff(totalUnmapped.toDouble(), rate = UNMAPPED_PENALTY_PER_STROKE)
     debug.append("Dir: ${(directionScore * 100).roundToInt()}% Unmap: $totalUnmapped | ")
 
@@ -175,16 +180,37 @@ private fun scoreRelations(
             val verticalMatch = scorePositionMatch(refRelation.verticalPosition, userRelation.verticalPosition)
             val connectionMatch = scoreConnectionMatch(refRelation, userRelation)
             val connectionMismatch = if (refRelation.connected != userRelation.connected) CONNECTION_MISMATCH_PENALTY else 0.0
+            val positionInversion = if (isInverted(refRelation, userRelation)) POSITION_INVERSION_PENALTY else 0.0
 
             positionMatches += maxOf(0.0,
                 horizontalMatch * RELATION_H_WEIGHT +
                     verticalMatch * RELATION_V_WEIGHT +
                     connectionMatch * RELATION_CONN_WEIGHT +
-                    connectionMismatch)
+                    connectionMismatch +
+                    positionInversion)
         }
     }
 
-    return if (totalChecks > 0) positionMatches / totalChecks else RELATION_FALLBACK
+    // Use expected pair count so unmapped strokes implicitly contribute 0
+    val expectedPairs = maxOf(user.strokeCount, ref.strokeCount).let { it * (it - 1) / 2 }
+    return if (expectedPairs > 0) positionMatches / expectedPairs else RELATION_FALLBACK
+}
+
+/**
+ * Detect when a stroke is on the completely wrong side of another (LEFT↔RIGHT or ABOVE↔BELOW).
+ * Without this, mirror-image letters like ㅏ/ㅓ or ㅗ/ㅜ score too high (~82%) because
+ * the position mismatch only zeroes out one small sub-component (H or V weight within relations),
+ * while direction, connection, and distribution all still give near-full credit.
+ * Rebalancing global weights would be riskier — this targets the exact structural error
+ * that causes the most damaging misclassifications between letters that share the same
+ * stroke types and only differ in spatial arrangement.
+ */
+private fun isInverted(ref: StrokeRelation, user: StrokeRelation): Boolean {
+    val hInverted = (ref.horizontalPosition == HorizontalPosition.LEFT_OF && user.horizontalPosition == HorizontalPosition.RIGHT_OF) ||
+        (ref.horizontalPosition == HorizontalPosition.RIGHT_OF && user.horizontalPosition == HorizontalPosition.LEFT_OF)
+    val vInverted = (ref.verticalPosition == VerticalPosition.ABOVE && user.verticalPosition == VerticalPosition.BELOW) ||
+        (ref.verticalPosition == VerticalPosition.BELOW && user.verticalPosition == VerticalPosition.ABOVE)
+    return hInverted || vInverted
 }
 
 private fun <T> scorePositionMatch(refPosition: T, userPosition: T): Double = when {
