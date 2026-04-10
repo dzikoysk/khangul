@@ -9,16 +9,20 @@ import kotlin.math.*
 private const val CIRCLE_CLOSURE_THRESHOLD = 0.20
 private const val CIRCLE_ASPECT_MIN = 0.5
 private const val CIRCLE_ASPECT_MAX = 2.0
-private const val CIRCLE_RADIUS_VARIANCE_MAX = 0.40
+private const val CIRCLE_RADIUS_VARIANCE_MAX = 0.16
 private const val CIRCLE_SAMPLE_COUNT = 60
 private const val CIRCLE_CORNER_ANGLE = 50.0
-private const val CIRCLE_STRAIGHT_RATIO_MAX = 0.20
+private const val CIRCLE_STRAIGHT_RATIO_MAX = 0.18
 private const val CIRCLE_MAX_CORNERS = 3
 private const val CIRCLE_MAX_GAPS = 3
 private const val CIRCLE_GAP_MAX_SINGLE = 0.15
 private const val CIRCLE_GAP_MAX_TOTAL_RATIO = 0.25
 private const val CIRCLE_GAP_MIN_THRESHOLD = 0.02
-private const val CIRCLE_STRAIGHT_ANGLE = 10.0
+// Sections of the path are "essentially flat" when consecutive direction vectors
+// are exactly collinear (angle ~0). True circles have continuous positive curvature
+// so literal zeros are extremely rare, while polygon sides produce many of them
+// (especially on mobile/touch input where points often land on the same pixel line).
+private const val CIRCLE_FLAT_ANGLE = 0.05
 private const val CIRCLE_ARC_SECTORS = 16
 private const val CIRCLE_MIN_ARC_COVERAGE = 0.75
 
@@ -101,9 +105,11 @@ fun detectCircularPattern(segments: List<List<DrawingPoint>>, bbox: BoundingBox)
     // Sample evenly spaced triplets and measure the angle change between them.
     // Circles have smooth curvature; polygons have sharp corners and straight runs.
     val step = maxOf(2, allPoints.size / CIRCLE_SAMPLE_COUNT)
+    // Expected per-triplet angle for a smooth circle traced at this density.
+    // Sections flatter than half this value are considered straight (polygon sides).
     var cornerCount = 0
-    var straightSectionLength = 0
-    var maxStraightSection = 0
+    var validAngles = 0
+    var flatAngles = 0
 
     var i = step * 2
     while (i < allPoints.size) {
@@ -113,21 +119,17 @@ fun detectCircularPattern(segments: List<List<DrawingPoint>>, bbox: BoundingBox)
 
         val angle = angleBetween(current - previous, next - current, minLength = 0.5)
         if (angle != null) {
-            if (angle < CIRCLE_STRAIGHT_ANGLE) {
-                straightSectionLength++
-                maxStraightSection = maxOf(maxStraightSection, straightSectionLength)
-            } else {
-                straightSectionLength = 0
-                if (angle > CIRCLE_CORNER_ANGLE) {
-                    cornerCount++
-                }
+            validAngles++
+            if (angle < CIRCLE_FLAT_ANGLE) {
+                flatAngles++
+            } else if (angle > CIRCLE_CORNER_ANGLE) {
+                cornerCount++
             }
         }
         i += step
     }
 
-    val sampledCount = allPoints.size / step
-    val straightRatio = if (sampledCount > 0) maxStraightSection.toDouble() / sampledCount else 0.0
+    val straightRatio = if (validAngles > 0) flatAngles.toDouble() / validAngles else 0.0
 
     if (cornerCount >= CIRCLE_MAX_CORNERS) return false
     if (cornerCount > 0 && straightRatio > CIRCLE_STRAIGHT_RATIO_MAX) return false
