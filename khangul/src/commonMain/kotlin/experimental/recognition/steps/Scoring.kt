@@ -266,14 +266,20 @@ fun recognizeShape(userPaths: List<List<DrawingPoint>>, flexible: Boolean = fals
     val results = mutableListOf<RecognitionResult>()
 
     for (letter in Letters.getAll()) {
-        val strokeDefs = letter.referenceStrokes.flatMap { it.toList() }
-        if (strokeDefs.isEmpty()) continue
-        val refSignature = createRefSignature(strokeDefs) ?: continue
-        val comparison = compareSignatures(userSignature, refSignature)
+        val forms = sequenceOf(letter.referenceStrokes) + letter.alternativeForms.asSequence()
+        var best: ComparisonResult? = null
+        for (form in forms) {
+            val strokeDefs = form.flatMap { it.toList() }
+            if (strokeDefs.isEmpty()) continue
+            val refSignature = createRefSignature(strokeDefs) ?: continue
+            val comparison = compareSignatures(userSignature, refSignature)
+            if (best == null || comparison.score > best.score) best = comparison
+        }
+        if (best == null) continue
         results.add(RecognitionResult(
             letter = letter,
-            coverage = (comparison.score * 100).roundToInt(),
-            debug = comparison.debug,
+            coverage = (best.score * 100).roundToInt(),
+            debug = best.debug,
         ))
     }
 

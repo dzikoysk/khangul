@@ -78,6 +78,14 @@ object Letters {
         arrayOf(ReferenceStroke(20.0, 30.0, 80.0, 30.0, LINE)),
         arrayOf(ReferenceStroke(50.0, 30.0, 18.0, 85.0, CURVE, controlX = 45.0, controlY = 58.0)),
         arrayOf(ReferenceStroke(50.0, 30.0, 82.0, 85.0, CURVE, controlX = 55.0, controlY = 58.0)),
+    ), alternativeForms = arrayOf(
+        // Two-bars form: short top horizontal + longer middle horizontal + curves
+        arrayOf(
+            arrayOf(ReferenceStroke(40.0, 14.0, 60.0, 14.0, LINE)),
+            arrayOf(ReferenceStroke(20.0, 30.0, 80.0, 30.0, LINE)),
+            arrayOf(ReferenceStroke(50.0, 30.0, 18.0, 85.0, CURVE, controlX = 45.0, controlY = 58.0)),
+            arrayOf(ReferenceStroke(50.0, 30.0, 82.0, 85.0, CURVE, controlX = 55.0, controlY = 58.0)),
+        ),
     ))
     val ㅋ = Letter("ㅋ", "kieuk", arrayOf("k"), CONSONANT, arrayOf(
         arrayOf(
@@ -104,6 +112,13 @@ object Letters {
         arrayOf(ReferenceStroke(50.0, 15.0, 50.0, 30.0, LINE)),
         arrayOf(ReferenceStroke(25.0, 30.0, 75.0, 30.0, LINE)),
         arrayOf(ReferenceStroke(50.0, 38.0, 50.0, 78.0, CIRCLE, controlX = 25.0)),
+    ), alternativeForms = arrayOf(
+        // Two-bars form: short top horizontal + longer middle horizontal + circle
+        arrayOf(
+            arrayOf(ReferenceStroke(40.0, 17.0, 60.0, 17.0, LINE)),
+            arrayOf(ReferenceStroke(25.0, 30.0, 75.0, 30.0, LINE)),
+            arrayOf(ReferenceStroke(50.0, 38.0, 50.0, 78.0, CIRCLE, controlX = 25.0)),
+        ),
     ))
 
     val consonants = listOf(ㄱ, ㄴ, ㄷ, ㄹ, ㅁ, ㅂ, ㅅ, ㅇ, ㅈ, ㅊ, ㅋ, ㅌ, ㅍ, ㅎ)

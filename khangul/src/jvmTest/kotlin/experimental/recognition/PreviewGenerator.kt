@@ -69,19 +69,25 @@ class PreviewGenerator {
         for (letter in Letters.getAll()) {
             val letterDir = File(baseDir, letter.character).also { it.mkdirs() }
 
-            val hasCircle = letter.referenceStrokes.any { step -> step.any { it.type == StrokeType.CIRCLE } }
+            val forms = listOf(letter.referenceStrokes) + letter.alternativeForms.toList()
+            var fileIdx = 1
+            for (form in forms) {
+                if (form.isEmpty()) continue
+                val hasCircle = form.any { step -> step.any { it.type == StrokeType.CIRCLE } }
 
-            // synthetic_1: wobbly circles for letters with circles, clean otherwise
-            val primary = SyntheticDrawings.wobblyDrawing(letter, 80)
-            if (primary.isEmpty()) continue
-            File(letterDir, "synthetic_1.json").writeText(pathsToJson(letter.character, primary))
-            ImageIO.write(renderDrawing(letter, primary), "PNG", File(letterDir, "synthetic_1.png"))
+                val wobbly = SyntheticDrawings.wobblyDrawing(form, 80)
+                if (wobbly.isEmpty()) continue
+                File(letterDir, "synthetic_$fileIdx.json").writeText(pathsToJson(letter.character, wobbly))
+                ImageIO.write(renderDrawing(letter, wobbly), "PNG", File(letterDir, "synthetic_$fileIdx.png"))
+                fileIdx++
 
-            // synthetic_2: clean circle variant (only for letters that have circle strokes)
-            if (hasCircle) {
-                val clean = SyntheticDrawings.cleanDrawing(letter, 80)
-                File(letterDir, "synthetic_2.json").writeText(pathsToJson(letter.character, clean))
-                ImageIO.write(renderDrawing(letter, clean), "PNG", File(letterDir, "synthetic_2.png"))
+                // Clean variant for forms containing a circle (deterministic shape vs wobbled)
+                if (hasCircle) {
+                    val clean = SyntheticDrawings.cleanDrawing(form, 80)
+                    File(letterDir, "synthetic_$fileIdx.json").writeText(pathsToJson(letter.character, clean))
+                    ImageIO.write(renderDrawing(letter, clean), "PNG", File(letterDir, "synthetic_$fileIdx.png"))
+                    fileIdx++
+                }
             }
 
             count++

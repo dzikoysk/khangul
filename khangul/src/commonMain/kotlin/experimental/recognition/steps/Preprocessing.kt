@@ -11,7 +11,7 @@ private const val CIRCLE_ASPECT_MIN = 0.5
 private const val CIRCLE_ASPECT_MAX = 2.0
 private const val CIRCLE_RADIUS_VARIANCE_MAX = 0.40
 private const val CIRCLE_SAMPLE_COUNT = 60
-private const val CIRCLE_CORNER_ANGLE = 35.0
+private const val CIRCLE_CORNER_ANGLE = 50.0
 private const val CIRCLE_STRAIGHT_RATIO_MAX = 0.20
 private const val CIRCLE_MAX_CORNERS = 3
 private const val CIRCLE_MAX_GAPS = 3
@@ -234,10 +234,36 @@ fun splitPathAtDirectionFlips(points: List<DrawingPoint>, windowSize: Int = FLIP
 
     if (currentSegment.size >= 2) segments.add(currentSegment.toList())
 
-    return segments.filter { segment ->
+    val filtered = segments.filter { segment ->
         if (segment.size < 2) return@filter false
         segment.first().toVec2().distanceTo(segment.last().toVec2()) > FLIP_MIN_SEGMENT_LENGTH
+    }.toMutableList()
+
+    // Closed path: if the user started mid-segment, the first and last segments
+    // are really one continuous bar split by the start point. Merge them by prepending
+    // the trailing segment to the leading one.
+    if (filtered.size >= 3) {
+        val pathClosed = points.first().toVec2().distanceTo(points.last().toVec2()) <
+            FLIP_MIN_SEGMENT_LENGTH * 2
+        if (pathClosed) {
+            val firstDir = dominantDirection(filtered.first())
+            val lastDir = dominantDirection(filtered.last())
+            if (firstDir != null && firstDir == lastDir) {
+                val tail = filtered.removeAt(filtered.lastIndex)
+                filtered[0] = tail + filtered[0]
+            }
+        }
     }
+
+    return filtered
+}
+
+private fun dominantDirection(segment: List<DrawingPoint>): Char? {
+    if (segment.size < 2) return null
+    val dx = abs(segment.last().x - segment.first().x)
+    val dy = abs(segment.last().y - segment.first().y)
+    if (dx < FLIP_MIN_MOVEMENT && dy < FLIP_MIN_MOVEMENT) return null
+    return if (dx >= dy) 'H' else 'V'
 }
 
 /**

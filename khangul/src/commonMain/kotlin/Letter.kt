@@ -18,6 +18,12 @@ class Letter(
     val romanization: Array<String>,
     val category: LetterCategory,
     val referenceStrokes: Array<Array<experimental.recognition.ReferenceStroke>> = emptyArray(),
+    /**
+     * Additional accepted ways to draw this letter. The recognizer scores each form
+     * and uses the highest match. The primary [referenceStrokes] is the form used
+     * for guided drawing and rendering.
+     */
+    val alternativeForms: Array<Array<Array<experimental.recognition.ReferenceStroke>>> = emptyArray(),
 ) {
 
     override fun toString(): String = character

@@ -149,6 +149,12 @@ class RecognitionIntegrationTest {
     fun `ㅢ connected drawing recognized as ui`() =
         assertRecognizesDrawing(Letters.ㅢ, "connected", SyntheticDrawings.uiConnected())
 
+    @Test @JsName("recognize_chieut_two_bars")
+    fun `ㅊ two-bars form recognized as chieut`() = assertRecognizesAlternativeForms(Letters.ㅊ)
+
+    @Test @JsName("recognize_hieut_two_bars")
+    fun `ㅎ two-bars form recognized as hieut`() = assertRecognizesAlternativeForms(Letters.ㅎ)
+
     // --- Confusion tests: similar letters should NOT be confused ---
 
     @Test @JsName("giyeok_not_nieun")
@@ -168,6 +174,14 @@ class RecognitionIntegrationTest {
     private fun assertRecognizes(letter: Letter) {
         assertRecognizesDrawing(letter, "wobbly", SyntheticDrawings.wobblyDrawing(letter))
         assertRecognizesDrawing(letter, "clean", SyntheticDrawings.cleanDrawing(letter))
+    }
+
+    private fun assertRecognizesAlternativeForms(letter: Letter) {
+        assertTrue(letter.alternativeForms.isNotEmpty(), "${letter.character} has no alternative forms")
+        for ((idx, form) in letter.alternativeForms.withIndex()) {
+            assertRecognizesDrawing(letter, "alt$idx-wobbly", SyntheticDrawings.wobblyDrawing(form))
+            assertRecognizesDrawing(letter, "alt$idx-clean", SyntheticDrawings.cleanDrawing(form))
+        }
     }
 
     private fun assertRecognizesDrawing(letter: Letter, variant: String, paths: List<List<DrawingPoint>>) {

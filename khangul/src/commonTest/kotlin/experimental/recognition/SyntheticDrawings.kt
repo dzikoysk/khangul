@@ -77,20 +77,24 @@ object SyntheticDrawings {
      * Generate a drawing with slight wobble on circles (simulates hand-drawn input).
      * Returns one path per step (not per segment).
      */
-    fun wobblyDrawing(letter: Letter, pointsPerStroke: Int = 50): List<List<DrawingPoint>> {
-        val steps = letter.referenceStrokes.toList()
-        if (steps.isEmpty()) return emptyList()
-        return steps.map { sampleStep(it, pointsPerStroke, wobble = true) }
+    fun wobblyDrawing(letter: Letter, pointsPerStroke: Int = 50): List<List<DrawingPoint>> =
+        wobblyDrawing(letter.referenceStrokes, pointsPerStroke)
+
+    fun wobblyDrawing(form: Array<Array<ReferenceStroke>>, pointsPerStroke: Int = 50): List<List<DrawingPoint>> {
+        if (form.isEmpty()) return emptyList()
+        return form.map { sampleStep(it, pointsPerStroke, wobble = true) }
     }
 
     /**
      * Generate a mathematically clean drawing — no wobble, exact paths.
      * Returns one path per step (not per segment).
      */
-    fun cleanDrawing(letter: Letter, pointsPerStroke: Int = 50): List<List<DrawingPoint>> {
-        val steps = letter.referenceStrokes.toList()
-        if (steps.isEmpty()) return emptyList()
-        return steps.map { sampleStep(it, pointsPerStroke, wobble = false) }
+    fun cleanDrawing(letter: Letter, pointsPerStroke: Int = 50): List<List<DrawingPoint>> =
+        cleanDrawing(letter.referenceStrokes, pointsPerStroke)
+
+    fun cleanDrawing(form: Array<Array<ReferenceStroke>>, pointsPerStroke: Int = 50): List<List<DrawingPoint>> {
+        if (form.isEmpty()) return emptyList()
+        return form.map { sampleStep(it, pointsPerStroke, wobble = false) }
     }
 
     fun allWobblyDrawings(pointsPerStroke: Int = 50): Map<Letter, List<List<DrawingPoint>>> =
