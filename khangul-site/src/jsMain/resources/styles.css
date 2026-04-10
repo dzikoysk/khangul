@@ -35,7 +35,7 @@ button:disabled { opacity: 0.4; cursor: default; }
 .tab { padding: 4px 12px; border-radius: 4px 4px 0 0; background: #2a2a4a; border: 1px solid #333; border-bottom: none; cursor: pointer; font-size: 0.8rem; color: #aaa; }
 .tab.active { background: #3a3a6a; color: #fff; }
 
-.result-list { display: flex; flex-direction: column; gap: 4px; max-height: 520px; overflow-y: auto; }
+.result-list { display: flex; flex-direction: column; gap: 4px; }
 .result-item { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 6px; background: #2a2a4a; font-size: 0.9rem; }
 .result-item.top { background: #2a4a2a; border: 1px solid #4a8a4a; }
 .result-char { font-size: 1.6rem; min-width: 36px; text-align: center; }
