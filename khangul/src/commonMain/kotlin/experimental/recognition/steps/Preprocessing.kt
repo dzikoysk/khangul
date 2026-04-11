@@ -9,24 +9,17 @@ import kotlin.math.*
 private const val CIRCLE_CLOSURE_THRESHOLD = 0.20
 private const val CIRCLE_ASPECT_MIN = 0.5
 private const val CIRCLE_ASPECT_MAX = 2.0
-private const val CIRCLE_RADIUS_VARIANCE_MAX = 0.16
+private const val CIRCLE_RADIUS_DEVIATION_MAX = 0.16
 private const val CIRCLE_SAMPLE_COUNT = 60
 private const val CIRCLE_CORNER_ANGLE = 50.0
-private const val CIRCLE_STRAIGHT_RATIO_MAX = 0.18
 private const val CIRCLE_MAX_CORNERS = 3
 private const val CIRCLE_MAX_GAPS = 3
 private const val CIRCLE_GAP_MAX_SINGLE = 0.15
 private const val CIRCLE_GAP_MAX_TOTAL_RATIO = 0.25
 private const val CIRCLE_GAP_MIN_THRESHOLD = 0.02
-// Sections of the path are "essentially flat" when consecutive direction vectors
-// are exactly collinear (angle ~0). True circles have continuous positive curvature
-// so literal zeros are extremely rare, while polygon sides produce many of them
-// (especially on mobile/touch input where points often land on the same pixel line).
-private const val CIRCLE_FLAT_ANGLE = 0.05
 private const val CIRCLE_ARC_SECTORS = 16
 private const val CIRCLE_MIN_ARC_COVERAGE = 0.75
 
-private const val CORNER_ANGLE_THRESHOLD = 50.0
 private const val CORNER_CUMULATIVE_THRESHOLD = 60.0
 private const val CORNER_SMOOTHING_WINDOW = 3
 private const val CORNER_MIN_SEGMENT_LENGTH = 3.0
@@ -45,8 +38,11 @@ private const val DEDUP_COLLINEAR_THRESHOLD = 0.08
 private const val DEDUP_OVERLAP_RATIO = 0.50
 
 /**
- * Detect if the given path segments form a closed circular shape.
- * Rejects polygons (too many corners) and shapes with long straight sections.
+ * Detect if the given path segments form a closed (or mostly-closed) circular shape.
+ *
+ * Rejects in order: paths with large pen-lift gaps, paths that fail both tight closure
+ * and arc coverage, elongated shapes (aspect ratio), shapes with inconsistent radius
+ * from center, and shapes with too many sharp corners.
  */
 fun detectCircularPattern(segments: List<List<DrawingPoint>>, bbox: BoundingBox): Boolean {
     if (segments.isEmpty()) return false
@@ -76,65 +72,57 @@ fun detectCircularPattern(segments: List<List<DrawingPoint>>, bbox: BoundingBox)
         if (totalGapDistance > PI * scale * CIRCLE_GAP_MAX_TOTAL_RATIO) return false
     }
 
+    if (bbox.width == 0.0 || bbox.height == 0.0) return false
+    val aspectRatio = bbox.width / bbox.height
+    if (aspectRatio < CIRCLE_ASPECT_MIN || aspectRatio > CIRCLE_ASPECT_MAX) return false
+
+    val center = bbox.center
+
     val firstPoint = segments.first().first().toVec2()
     val lastPoint = segments.last().last().toVec2()
     if (firstPoint.distanceTo(lastPoint) > scale * CIRCLE_CLOSURE_THRESHOLD) {
         // Not tightly closed – accept if the arc covers most of the circle (handles overshoot and open arcs)
-        val center = bbox.center
+        val minCoveredSectors = ceil(CIRCLE_MIN_ARC_COVERAGE * CIRCLE_ARC_SECTORS).toInt()
         val covered = BooleanArray(CIRCLE_ARC_SECTORS)
+        var coveredCount = 0
         for (p in allPoints) {
             val v = p.toVec2()
             val angle = atan2(v.y - center.y, v.x - center.x)
-            val sector = ((angle + PI) / (2 * PI) * CIRCLE_ARC_SECTORS).toInt().coerceIn(0, CIRCLE_ARC_SECTORS - 1)
-            covered[sector] = true
+            val sector = ((angle + PI) / (2 * PI) * CIRCLE_ARC_SECTORS).toInt().mod(CIRCLE_ARC_SECTORS)
+            if (!covered[sector]) {
+                covered[sector] = true
+                coveredCount++
+                if (coveredCount >= minCoveredSectors) break
+            }
         }
-        if (covered.count { it }.toDouble() / CIRCLE_ARC_SECTORS < CIRCLE_MIN_ARC_COVERAGE) return false
+        if (coveredCount < minCoveredSectors) return false
     }
 
-    val aspectRatio = bbox.width / (bbox.height.let { if (it == 0.0) 1.0 else it })
-    if (aspectRatio < CIRCLE_ASPECT_MIN || aspectRatio > CIRCLE_ASPECT_MAX) return false
-
-    val center = bbox.center
     val avgRadius = (bbox.width + bbox.height) / 4.0
-    var radiusVariance = 0.0
+    var radiusDeviation = 0.0
     for (point in allPoints) {
-        radiusVariance += abs(point.toVec2().distanceTo(center) - avgRadius)
+        radiusDeviation += abs(point.toVec2().distanceTo(center) - avgRadius)
     }
-    radiusVariance /= allPoints.size
+    radiusDeviation /= allPoints.size
+    if (radiusDeviation >= avgRadius * CIRCLE_RADIUS_DEVIATION_MAX) return false
 
-    // Sample evenly spaced triplets and measure the angle change between them.
-    // Circles have smooth curvature; polygons have sharp corners and straight runs.
+    // Sample evenly spaced triplets and count sharp corners. Polygons concentrate
+    // their direction change at a few vertices; smooth curves spread it uniformly.
     val step = maxOf(2, allPoints.size / CIRCLE_SAMPLE_COUNT)
-    // Expected per-triplet angle for a smooth circle traced at this density.
-    // Sections flatter than half this value are considered straight (polygon sides).
     var cornerCount = 0
-    var validAngles = 0
-    var flatAngles = 0
-
-    var i = step * 2
-    while (i < allPoints.size) {
+    for (i in step * 2 until allPoints.size step step) {
         val previous = allPoints[i - step * 2].toVec2()
         val current = allPoints[i - step].toVec2()
         val next = allPoints[i].toVec2()
 
         val angle = angleBetween(current - previous, next - current, minLength = 0.5)
-        if (angle != null) {
-            validAngles++
-            if (angle < CIRCLE_FLAT_ANGLE) {
-                flatAngles++
-            } else if (angle > CIRCLE_CORNER_ANGLE) {
-                cornerCount++
-            }
+        if (angle != null && angle > CIRCLE_CORNER_ANGLE) {
+            cornerCount++
+            if (cornerCount >= CIRCLE_MAX_CORNERS) return false
         }
-        i += step
     }
 
-    val straightRatio = if (validAngles > 0) flatAngles.toDouble() / validAngles else 0.0
-
-    if (cornerCount >= CIRCLE_MAX_CORNERS) return false
-    if (cornerCount > 0 && straightRatio > CIRCLE_STRAIGHT_RATIO_MAX) return false
-
-    return radiusVariance < avgRadius * CIRCLE_RADIUS_VARIANCE_MAX
+    return true
 }
 
 /**
