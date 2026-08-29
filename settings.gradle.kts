@@ -1,6 +1,6 @@
 pluginManagement {
     plugins {
-        kotlin("multiplatform") version "2.3.20"
+        kotlin("multiplatform") version "2.4.10"
         id("dev.petuska.npm.publish") version "3.5.3"
     }
 }

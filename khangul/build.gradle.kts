@@ -11,7 +11,7 @@ repositories {
 }
 
 kotlin {
-    js(IR) {
+    js {
         browser()
         generateTypeScriptDefinitions()
         binaries.library()
